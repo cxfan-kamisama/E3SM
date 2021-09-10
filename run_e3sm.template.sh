@@ -175,6 +175,7 @@ cat << EOF >> user_nl_elm
  hist_mfilt = 1,365
  hist_nhtfrq = 0,-24
  hist_avgflag_pertape = 'A','A'
+ check_finidat_pct_consistency = .false.
 EOF
 
 cat << EOF >> user_nl_mosart
