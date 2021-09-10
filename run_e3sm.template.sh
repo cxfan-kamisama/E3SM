@@ -19,13 +19,13 @@ main() {
 
 # Machine and project
 readonly MACHINE=cori-knl
-readonly PROJECT="e3sm"
+readonly PROJECT="m2136"
 
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="v2.LR.piControl"
-readonly CASE_GROUP="v2.LR"
+readonly CASE_NAME="master.v2.LR.historical"
+readonly CASE_GROUP="master.v2.LR"
 
 # Code and compilation
 readonly CHECKOUT="20210806"
@@ -35,16 +35,16 @@ readonly DEBUG_COMPILE=false
 
 # Run options
 readonly MODEL_START_TYPE="hybrid"  # 'initial', 'continue', 'branch', 'hybrid'
-readonly START_DATE="0001-01-01"
+readonly START_DATE="2000-01-01"
 
 # Additional options for 'branch' and 'hybrid'
 readonly GET_REFCASE=TRUE
-readonly RUN_REFDIR="/global/cscratch1/sd/forsyth/E3SMv2/v2.LR.piControl/init"
-readonly RUN_REFCASE="20210625.v2rc3c-GWD.piControl.ne30pg2_EC30to60E2r2.chrysalis"
-readonly RUN_REFDATE="1001-01-01"   # same as MODEL_START_DATE for 'branch', can be different for 'hybrid'
+readonly RUN_REFDIR="/global/cscratch1/sd/cxfan/E3SMv2/v2.LR.historical_0101/rest/2000-01-01-00000"
+readonly RUN_REFCASE="v2.LR.historical_0101"
+readonly RUN_REFDATE="2000-01-01"   # same as MODEL_START_DATE for 'branch', can be different for 'hybrid'
 
 # Set paths
-readonly CODE_ROOT="${HOME}/E3SMv2/code/${CHECKOUT}"
+readonly CODE_ROOT="${HOME}/model/E3SM_v2_UMRad"
 readonly CASE_ROOT="/global/cscratch1/sd/${USER}/E3SMv2/${CASE_NAME}"
 
 # Sub-directories
@@ -55,7 +55,9 @@ readonly CASE_ARCHIVE_DIR=${CASE_ROOT}/archive
 #  short tests: 'XS_2x5_ndays', 'XS_1x10_ndays', 'S_1x10_ndays',
 #               'M_1x10_ndays', 'M2_1x10_ndays', 'M80_1x10_ndays', 'L_1x10_ndays'
 #  or 'production' for full simulation
-readonly run='XS_2x5_ndays'
+readonly run='L_1x10_ndays'
+readonly debug_queue=true
+
 if [ "${run}" != "production" ]; then
 
   # Short test simulations
@@ -68,13 +70,20 @@ if [ "${run}" != "production" ]; then
   readonly CASE_SCRIPTS_DIR=${CASE_ROOT}/tests/${run}/case_scripts
   readonly CASE_RUN_DIR=${CASE_ROOT}/tests/${run}/run
   readonly PELAYOUT=${layout}
-  readonly WALLTIME="2:00:00"
   readonly STOP_OPTION=${units}
   readonly STOP_N=${length}
   readonly REST_OPTION=${STOP_OPTION}
   readonly REST_N=${STOP_N}
-  readonly RESUBMIT=${resubmit}
   readonly DO_SHORT_TERM_ARCHIVING=false
+
+  if [ $debug_queue == "true" ]; then
+    readonly WALLTIME="0:30:00"
+    readonly RESUBMIT=0
+    echo "WARNING: You have to resubmit the job for ${resubmit} times to complete the test, since you submit it to the debug queue."
+  else
+    readonly WALLTIME="2:00:00"
+    readonly RESUBMIT=${resubmit}
+  fi
 
 else
 
@@ -82,12 +91,12 @@ else
   readonly CASE_SCRIPTS_DIR=${CASE_ROOT}/case_scripts
   readonly CASE_RUN_DIR=${CASE_ROOT}/run
   readonly PELAYOUT="L"
-  readonly WALLTIME="34:00:00"
-  readonly STOP_OPTION="nyears"
-  readonly STOP_N="50"
-  readonly REST_OPTION="nyears"
-  readonly REST_N="5"
-  readonly RESUBMIT="9"
+  readonly WALLTIME="0:30:00"
+  readonly STOP_OPTION="ndays"
+  readonly STOP_N="1"
+  readonly REST_OPTION="ndays"
+  readonly REST_N="1"
+  readonly RESUBMIT="0"
   readonly DO_SHORT_TERM_ARCHIVING=false
 fi
 
@@ -99,7 +108,7 @@ readonly HIST_N="5"
 readonly OLD_EXECUTABLE=""
 
 # --- Toggle flags for what to do ----
-do_fetch_code=true
+do_fetch_code=false
 do_create_newcase=true
 do_case_setup=true
 do_case_build=true
@@ -285,6 +294,11 @@ case_setup() {
     # Short term archiving
     ./xmlchange DOUT_S=${DO_SHORT_TERM_ARCHIVING^^}
     ./xmlchange DOUT_S_ROOT=${CASE_ARCHIVE_DIR}
+
+    # Debug queue
+    if [ ${debug_queue} == "true" ]; then
+        ./xmlchange JOB_QUEUE="debug"
+    fi
 
     # Build with COSP, except for a data atmosphere (datm)
     if [ `./xmlquery --value COMP_ATM` == "datm"  ]; then
