@@ -24,7 +24,7 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="UMRad.v2.LR.hist_noScatEmis"
+readonly CASE_NAME="UMRad.v2.LR.hist_full"
 readonly CASE_GROUP="UMRad.v2.LR"
 
 # Code and compilation
@@ -56,7 +56,7 @@ readonly CASE_ARCHIVE_DIR=${CASE_ROOT}/archive
 #               'M_1x10_ndays', 'M2_1x10_ndays', 'M80_1x10_ndays', 'L_1x10_ndays'
 #  or 'production' for full simulation
 readonly run='L_1x10_ndays'
-readonly debug_queue=true
+readonly debug_queue=false
 
 if [ "${run}" != "production" ]; then
 
@@ -168,10 +168,10 @@ cat << EOF >> user_nl_eam
  fincl7 = 'O3', 'PS', 'TROP_P'
 
 ! UMRad flags
- flag_mc6 = .false.
- flag_rtr2 = .false.
- flag_scat = .false.
- flag_emis = .false.
+ flag_mc6 = .true.
+ flag_rtr2 = .true.
+ flag_scat = .true.
+ flag_emis = .true.
 
 ! Additional retuning
  clubb_tk1 = 268.15D0
@@ -336,7 +336,7 @@ case_build() {
     pushd ${CASE_SCRIPTS_DIR}
 
     # UMRad: link surface emissivity file
-    ln -s $SURF_EMIS_FILE ${CASE_RUN_DIR}/
+    ln -s $SURF_EMIS_FILE ${CASE_RUN_DIR}/surface_emissivity_1x1_UMRad_53deg.nc
 
     # do_case_build = false
     if [ "${do_case_build,,}" != "true" ]; then
