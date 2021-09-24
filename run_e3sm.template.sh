@@ -24,8 +24,8 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="UMRad.v2.LR.hist_full"
-readonly CASE_GROUP="UMRad.v2.LR"
+readonly CASE_NAME="UMRad.1-2.v2.LR.hist_full"
+readonly CASE_GROUP="UMRad.1-2.v2.LR"
 
 # Code and compilation
 readonly CHECKOUT="20210806"
@@ -55,7 +55,7 @@ readonly CASE_ARCHIVE_DIR=${CASE_ROOT}/archive
 #  short tests: 'XS_2x5_ndays', 'XS_1x10_ndays', 'S_1x10_ndays',
 #               'M_1x10_ndays', 'M2_1x10_ndays', 'M80_1x10_ndays', 'L_1x10_ndays'
 #  or 'production' for full simulation
-readonly run='L_1x10_ndays'
+readonly run='M_1x10_ndays'
 readonly debug_queue=false
 
 if [ "${run}" != "production" ]; then
@@ -114,7 +114,7 @@ readonly SURF_EMIS_FILE="/global/cscratch1/sd/cxfan/data/surf_emis/surface_emiss
 do_fetch_code=false
 do_create_newcase=true
 do_case_setup=true
-do_case_build=true
+do_case_build=false
 do_case_submit=true
 
 # --- Now, do the work ---
