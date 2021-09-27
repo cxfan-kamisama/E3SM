@@ -108,7 +108,7 @@ readonly HIST_N="5"
 readonly OLD_EXECUTABLE=""
 
 # UMRad: Surface emissivity file
-readonly SURF_EMIS_FILE="/global/cscratch1/sd/cxfan/data/surf_emis/surface_emissivity_1x1_RRTMG_53deg.nc"
+readonly SURF_EMIS_FILE="/global/cscratch1/sd/cxfan/data/surf_emis/surface_emissivity_1x1_to_ne30np4_RRTMG_53deg.ra_c20210416.nc"
 
 # --- Toggle flags for what to do ----
 do_fetch_code=false
@@ -336,7 +336,7 @@ case_build() {
     pushd ${CASE_SCRIPTS_DIR}
 
     # UMRad: link surface emissivity file
-    ln -s $SURF_EMIS_FILE ${CASE_RUN_DIR}/surface_emissivity_1x1_UMRad_53deg.nc
+    ln -s $SURF_EMIS_FILE ${CASE_RUN_DIR}/
 
     # do_case_build = false
     if [ "${do_case_build,,}" != "true" ]; then
