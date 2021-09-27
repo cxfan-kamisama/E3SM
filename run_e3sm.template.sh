@@ -24,8 +24,8 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="UMRad.1-2.v2.LR.hist_full"
-readonly CASE_GROUP="UMRad.1-2.v2.LR"
+readonly CASE_NAME="UMRad.2-0.v2.LR.hist_full"
+readonly CASE_GROUP="UMRad.2-0.v2.LR"
 
 # Code and compilation
 readonly CHECKOUT="20210806"
