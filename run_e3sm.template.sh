@@ -55,7 +55,7 @@ readonly CASE_ARCHIVE_DIR=${CASE_ROOT}/archive
 #  short tests: 'XS_2x5_ndays', 'XS_1x10_ndays', 'S_1x10_ndays',
 #               'M_1x10_ndays', 'M2_1x10_ndays', 'M80_1x10_ndays', 'L_1x10_ndays'
 #  or 'production' for full simulation
-readonly run='M_1x10_ndays'
+readonly run='production'
 readonly debug_queue=false
 
 if [ "${run}" != "production" ]; then
@@ -91,11 +91,11 @@ else
   readonly CASE_SCRIPTS_DIR=${CASE_ROOT}/case_scripts
   readonly CASE_RUN_DIR=${CASE_ROOT}/run
   readonly PELAYOUT="L"
-  readonly WALLTIME="0:30:00"
-  readonly STOP_OPTION="ndays"
-  readonly STOP_N="1"
-  readonly REST_OPTION="ndays"
-  readonly REST_N="1"
+  readonly WALLTIME="12:00:00"
+  readonly STOP_OPTION="nmonths"
+  readonly STOP_N="6"
+  readonly REST_OPTION="nmonths"
+  readonly REST_N="3"
   readonly RESUBMIT="0"
   readonly DO_SHORT_TERM_ARCHIVING=false
 fi
@@ -114,7 +114,7 @@ readonly SURF_EMIS_FILE="/global/cscratch1/sd/cxfan/data/surf_emis/surface_emiss
 do_fetch_code=false
 do_create_newcase=true
 do_case_setup=true
-do_case_build=false
+do_case_build=true
 do_case_submit=true
 
 # --- Now, do the work ---
