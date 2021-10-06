@@ -108,7 +108,7 @@ readonly HIST_N="5"
 readonly OLD_EXECUTABLE=""
 
 # UMRad: Surface emissivity file
-readonly SURF_EMIS_FILE="/global/cscratch1/sd/cxfan/data/surf_emis/surface_emissivity_1x1_to_ne30np4_RRTMG_53deg.ra_c20210416.nc"
+readonly SURF_EMIS_FILE="/global/cscratch1/sd/cxfan/data/surf_emis/surface_emissivity_1x1_to_ne30pg2_RRTMG_53deg.ra_c20210416.nc"
 
 # --- Toggle flags for what to do ----
 do_fetch_code=false

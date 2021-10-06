@@ -36,7 +36,7 @@ module surface_emis_mod
   real(r8) :: v1_rrtmg_lw(nlwbands + 1)   ! RRTMG_LW band edges
   real(r8) :: desert_emis(nlwbands), water_emis(nlwbands),ice_emis(nlwbands), &
               grass_emis(nlwbands), snow_emis(nlwbands)
-  character(256) :: surf_emis_file='surface_emissivity_1x1_to_ne30np4_RRTMG_53deg.ra_c20210416.nc'
+  character(256) :: surf_emis_file='surface_emissivity_1x1_to_ne30pg2_RRTMG_53deg.ra_c20210416.nc'
 
 !
 !================================================================================
