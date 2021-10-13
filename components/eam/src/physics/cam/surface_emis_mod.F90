@@ -5,7 +5,7 @@ module surface_emis_mod
 ! surface spectral emissivity
 
   use time_manager  , only: get_curr_date
-! use radiation     , only: umich_surf_emis_file
+  use radiation     , only: surf_emis_file
   use radconstants  , only: nlwbands 
   use ppgrid        , only: pcols, begchunk, endchunk
   use shr_kind_mod  , only: r8 => shr_kind_r8
@@ -186,9 +186,9 @@ CONTAINS
       real(r8) :: minvalue
       real(r8),intent(out) :: surface_emis(ncols, nlwbands)
 
-      filename = "surface_emissivity_1x1_UMRad_53deg.nc"
+      ! filename = "surface_emissivity_1x1_UMRad_53deg.nc"
       !filename = "/global/cscratch1/sd/xianwen/data/emis/surface_emissivity_1x1_RRTMGP_53deg.nc"
-      status = nf90_open(trim(filename), nf90_nowrite, ncid)
+      status = nf90_open(trim(surf_emis_file), nf90_nowrite, ncid)
       status = nf90_inq_dimid(ncid, "time", timeID)
       status = nf90_inq_dimid(ncid, "lat", latID)
       status = nf90_inq_dimid(ncid, "lon", lonID)

@@ -172,6 +172,7 @@ cat << EOF >> user_nl_eam
  flag_rtr2 = .true.
  flag_scat = .true.
  flag_emis = .true.
+ surf_emis_file = '$SURF_EMIS_FILE'
 
 ! Additional retuning
  clubb_tk1 = 268.15D0
@@ -334,9 +335,6 @@ case_setup() {
 case_build() {
 
     pushd ${CASE_SCRIPTS_DIR}
-
-    # UMRad: link surface emissivity file
-    ln -s $SURF_EMIS_FILE ${CASE_RUN_DIR}/surface_emissivity_1x1_UMRad_53deg.nc
 
     # do_case_build = false
     if [ "${do_case_build,,}" != "true" ]; then
