@@ -19,12 +19,12 @@ main() {
 
 # Machine and project
 readonly MACHINE=cori-knl
-readonly PROJECT="e3sm"
+readonly PROJECT="m2136"
 
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="v2.LR.piControl"
+readonly CASE_NAME="v2.LR.piControl.branch.test"
 readonly CASE_GROUP="v2.LR"
 
 # Code and compilation
@@ -34,17 +34,17 @@ readonly CHERRY=( )
 readonly DEBUG_COMPILE=false
 
 # Run options
-readonly MODEL_START_TYPE="hybrid"  # 'initial', 'continue', 'branch', 'hybrid'
+readonly MODEL_START_TYPE="branch"  # 'initial', 'continue', 'branch', 'hybrid'
 readonly START_DATE="0001-01-01"
 
 # Additional options for 'branch' and 'hybrid'
 readonly GET_REFCASE=TRUE
-readonly RUN_REFDIR="/global/cscratch1/sd/forsyth/E3SMv2/v2.LR.piControl/init"
-readonly RUN_REFCASE="20210625.v2rc3c-GWD.piControl.ne30pg2_EC30to60E2r2.chrysalis"
-readonly RUN_REFDATE="1001-01-01"   # same as MODEL_START_DATE for 'branch', can be different for 'hybrid'
+readonly RUN_REFDIR="/global/cscratch1/sd/cxfan/E3SMv2/v2.LR.piControl/rest/0101-01-01-00000"
+readonly RUN_REFCASE="v2.LR.piControl"
+readonly RUN_REFDATE="0101-01-01"   # same as MODEL_START_DATE for 'branch', can be different for 'hybrid'
 
 # Set paths
-readonly CODE_ROOT="${HOME}/E3SMv2/code/${CHECKOUT}"
+readonly CODE_ROOT="${HOME}/model/E3SM_v2_UMRad"
 readonly CASE_ROOT="/global/cscratch1/sd/${USER}/E3SMv2/${CASE_NAME}"
 
 # Sub-directories
@@ -82,12 +82,12 @@ else
   readonly CASE_SCRIPTS_DIR=${CASE_ROOT}/case_scripts
   readonly CASE_RUN_DIR=${CASE_ROOT}/run
   readonly PELAYOUT="L"
-  readonly WALLTIME="34:00:00"
-  readonly STOP_OPTION="nyears"
-  readonly STOP_N="50"
-  readonly REST_OPTION="nyears"
+  readonly WALLTIME="0:30:00"
+  readonly STOP_OPTION="ndays"
+  readonly STOP_N="5"
+  readonly REST_OPTION="ndays"
   readonly REST_N="5"
-  readonly RESUBMIT="9"
+  readonly RESUBMIT="0"
   readonly DO_SHORT_TERM_ARCHIVING=false
 fi
 
@@ -99,7 +99,7 @@ readonly HIST_N="5"
 readonly OLD_EXECUTABLE=""
 
 # --- Toggle flags for what to do ----
-do_fetch_code=true
+do_fetch_code=false
 do_create_newcase=true
 do_case_setup=true
 do_case_build=true
