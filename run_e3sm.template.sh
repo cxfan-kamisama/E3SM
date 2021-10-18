@@ -24,8 +24,8 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="UMRad.2-0.v2.LR.hist_full"
-readonly CASE_GROUP="UMRad.2-0.v2.LR"
+readonly CASE_NAME="20211015.v2.LR.piControl.0101.UMRad.noScatEmis"
+readonly CASE_GROUP="20211015.v2.LR.piControl.0101.UMRad"
 
 # Code and compilation
 readonly CHECKOUT="20210806"
@@ -34,14 +34,14 @@ readonly CHERRY=( )
 readonly DEBUG_COMPILE=false
 
 # Run options
-readonly MODEL_START_TYPE="hybrid"  # 'initial', 'continue', 'branch', 'hybrid'
-readonly START_DATE="2000-01-01"
+readonly MODEL_START_TYPE="branch"  # 'initial', 'continue', 'branch', 'hybrid'
+readonly START_DATE="0001-01-01"
 
 # Additional options for 'branch' and 'hybrid'
 readonly GET_REFCASE=TRUE
-readonly RUN_REFDIR="/global/cscratch1/sd/cxfan/E3SMv2/v2.LR.historical_0101/rest/2000-01-01-00000"
-readonly RUN_REFCASE="v2.LR.historical_0101"
-readonly RUN_REFDATE="2000-01-01"   # same as MODEL_START_DATE for 'branch', can be different for 'hybrid'
+readonly RUN_REFDIR="/global/cscratch1/sd/cxfan/E3SMv2/v2.LR.piControl/rest/0101-01-01-00000"
+readonly RUN_REFCASE="v2.LR.piControl"
+readonly RUN_REFDATE="0101-01-01"   # same as MODEL_START_DATE for 'branch', can be different for 'hybrid'
 
 # Set paths
 readonly CODE_ROOT="${HOME}/model/E3SM_v2_UMRad"
@@ -92,11 +92,11 @@ else
   readonly CASE_RUN_DIR=${CASE_ROOT}/run
   readonly PELAYOUT="L"
   readonly WALLTIME="12:00:00"
-  readonly STOP_OPTION="nmonths"
-  readonly STOP_N="6"
-  readonly REST_OPTION="nmonths"
-  readonly REST_N="3"
-  readonly RESUBMIT="0"
+  readonly STOP_OPTION="nyears"
+  readonly STOP_N="2"
+  readonly REST_OPTION="nyears"
+  readonly REST_N="2"
+  readonly RESUBMIT="2"
   readonly DO_SHORT_TERM_ARCHIVING=false
 fi
 
@@ -168,10 +168,10 @@ cat << EOF >> user_nl_eam
  fincl7 = 'O3', 'PS', 'TROP_P'
 
 ! UMRad flags
- flag_mc6 = .true.
- flag_rtr2 = .true.
- flag_scat = .true.
- flag_emis = .true.
+ flag_mc6 = .false.
+ flag_rtr2 = .false.
+ flag_scat = .false.
+ flag_emis = .false.
  surf_emis_file = '$SURF_EMIS_FILE'
 
 ! Additional retuning
@@ -185,7 +185,6 @@ cat << EOF >> user_nl_elm
  hist_mfilt = 1,365
  hist_nhtfrq = 0,-24
  hist_avgflag_pertape = 'A','A'
- check_finidat_pct_consistency = .false.
 EOF
 
 cat << EOF >> user_nl_mosart
