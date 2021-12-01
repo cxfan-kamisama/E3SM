@@ -24,7 +24,7 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="20211015.v2.LR.piControl.0101.UMRad.noScatEmis"
+readonly CASE_NAME="20211015.v2.LR.piControl.0101.UMRad.CTRL"
 readonly CASE_GROUP="20211015.v2.LR.piControl.0101.UMRad"
 
 # Code and compilation
@@ -91,12 +91,12 @@ else
   readonly CASE_SCRIPTS_DIR=${CASE_ROOT}/case_scripts
   readonly CASE_RUN_DIR=${CASE_ROOT}/run
   readonly PELAYOUT="L"
-  readonly WALLTIME="12:00:00"
+  readonly WALLTIME="30:00:00"
   readonly STOP_OPTION="nyears"
-  readonly STOP_N="2"
+  readonly STOP_N="6"
   readonly REST_OPTION="nyears"
   readonly REST_N="2"
-  readonly RESUBMIT="2"
+  readonly RESUBMIT="5"
   readonly DO_SHORT_TERM_ARCHIVING=false
 fi
 
@@ -168,8 +168,8 @@ cat << EOF >> user_nl_eam
  fincl7 = 'O3', 'PS', 'TROP_P'
 
 ! UMRad flags
- flag_mc6 = .false.
- flag_rtr2 = .false.
+ flag_mc6 = .true.
+ flag_rtr2 = .true.
  flag_scat = .false.
  flag_emis = .false.
  surf_emis_file = '$SURF_EMIS_FILE'
