@@ -24,7 +24,7 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="20211015.v2.LR.piControl.0101.UMRad.noScatEmis"
+readonly CASE_NAME="20211015.v2.LR.piControl.0101.UMRad.Full"
 readonly CASE_GROUP="20211015.v2.LR.piControl.0101.UMRad"
 
 # Code and compilation
@@ -168,10 +168,10 @@ cat << EOF >> user_nl_eam
  fincl7 = 'O3', 'PS', 'TROP_P'
 
 ! UMRad flags
- flag_mc6 = .false.
- flag_rtr2 = .false.
- flag_scat = .false.
- flag_emis = .false.
+ flag_mc6 = .true.
+ flag_rtr2 = .true.
+ flag_scat = .true.
+ flag_emis = .true.
  surf_emis_file = '$SURF_EMIS_FILE'
 
 ! Additional retuning
