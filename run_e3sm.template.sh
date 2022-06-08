@@ -172,6 +172,8 @@ cat << EOF >> user_nl_eam
  flag_rtr2 = .true.
  flag_scat = .true.
  flag_emis = .false.
+
+ flag_scat_offline = .true.
  surf_emis_file = '$SURF_EMIS_FILE'
 
 ! Additional retuning

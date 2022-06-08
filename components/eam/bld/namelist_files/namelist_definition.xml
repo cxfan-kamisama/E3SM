@@ -3747,6 +3747,12 @@ Indicates whether to use a hybrid 2-4 stream radiative transfer in longwave radi
 Default: FALSE
 </entry>
 
+<entry id="flag_scat_offline" type="logical"  category="radiation"
+       group="radiation_nl" valid_values="" >
+Indicates whether to double call the radiation routine without cloud LW scattering (U-MICH)
+Default: TRUE
+</entry>
+
 <entry id="surf_emis_file" type="char*256"  category="radiation"
        group="radiation_nl" valid_values="" >
 Surface emissivity data file name required when surface spectral emissivity is used.
