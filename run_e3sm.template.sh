@@ -24,8 +24,8 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="20211015.v2.LR.piControl.0101.UMRad.Scat"
-readonly CASE_GROUP="20211015.v2.LR.piControl.0101.UMRad"
+readonly CASE_NAME="test.v2.LR.piControl.0101.Scat.offline"
+readonly CASE_GROUP="test.v2.LR.piControl.0101.UMRad"
 
 # Code and compilation
 readonly CHECKOUT="20210806"
@@ -91,11 +91,11 @@ else
   readonly CASE_SCRIPTS_DIR=${CASE_ROOT}/case_scripts
   readonly CASE_RUN_DIR=${CASE_ROOT}/run
   readonly PELAYOUT="L"
-  readonly WALLTIME="12:00:00"
+  readonly WALLTIME="10:00:00"
   readonly STOP_OPTION="nyears"
-  readonly STOP_N="2"
-  readonly REST_OPTION="nyears"
-  readonly REST_N="2"
+  readonly STOP_N="1"
+  readonly REST_OPTION="nmonths"
+  readonly REST_N="6"
   readonly RESUBMIT="2"
   readonly DO_SHORT_TERM_ARCHIVING=false
 fi
@@ -155,17 +155,12 @@ echo $'\n----- All done -----\n'
 user_nl() {
 
 cat << EOF >> user_nl_eam
- nhtfrq =   0,-24,-6,-6,-3,-24,0
- mfilt  = 1,30,120,120,240,30,1
- avgflag_pertape = 'A','A','I','A','A','A','I'
+ nhtfrq =   0,-24
+ mfilt  = 1,30
+ avgflag_pertape = 'A','A'
  fexcl1 = 'CFAD_SR532_CAL', 'LINOZ_DO3', 'LINOZ_DO3_PSC', 'LINOZ_O3CLIM', 'LINOZ_O3COL', 'LINOZ_SSO3', 'hstobie_linoz'
- fincl1 = 'extinct_sw_inp','extinct_lw_bnd7','extinct_lw_inp','CLD_CAL', 'TREFMNAV', 'TREFMXAV'
- fincl2 = 'FLUT','PRECT','U200','V200','U850','V850','Z500','OMEGA500','UBOT','VBOT','TREFHT','TREFHTMN:M','TREFHTMX:X','QREFHT','TS','PS','TMQ','TUQ','TVQ','TOZ', 'FLDS', 'FLNS', 'FSDS', 'FSNS', 'SHFLX', 'LHFLX', 'TGCLDCWP', 'TGCLDIWP', 'TGCLDLWP', 'CLDTOT', 'T250', 'T200', 'T150', 'T100', 'T050', 'T025', 'T010', 'T005', 'T002', 'T001', 'TTOP', 'U250', 'U150', 'U100', 'U050', 'U025', 'U010', 'U005', 'U002', 'U001', 'UTOP', 'FSNT', 'FLNT'
- fincl3 = 'PSL','T200','T500','U850','V850','UBOT','VBOT','TREFHT', 'Z700', 'TBOT:M'
- fincl4 = 'FLUT','U200','U850','PRECT','OMEGA500'
- fincl5 = 'PRECT','PRECC','TUQ','TVQ','QFLX','SHFLX','U90M','V90M'
- fincl6 = 'CLDTOT_ISCCP','MEANCLDALB_ISCCP','MEANTAU_ISCCP','MEANPTOP_ISCCP','MEANTB_ISCCP','CLDTOT_CAL','CLDTOT_CAL_LIQ','CLDTOT_CAL_ICE','CLDTOT_CAL_UN','CLDHGH_CAL','CLDHGH_CAL_LIQ','CLDHGH_CAL_ICE','CLDHGH_CAL_UN','CLDMED_CAL','CLDMED_CAL_LIQ','CLDMED_CAL_ICE','CLDMED_CAL_UN','CLDLOW_CAL','CLDLOW_CAL_LIQ','CLDLOW_CAL_ICE','CLDLOW_CAL_UN'
- fincl7 = 'O3', 'PS', 'TROP_P'
+ fincl1 = 'QRLC_OFF', 'QRL_OFF', 'QRLC', 'QRL', 'LWC', 'IWC', 'FLNT_OFF', 'FLUT_OFF', 'FLUTC_OFF', 'FLNTC_OFF', 'FLNS_OFF', 'FLDSC_OFF', 'FLNSC_OFF', 'LWCF_OFF', 'FLDS_OFF', 'FLNT', 'FLUT', 'FLUTC', 'FLNTC', 'FLNS', 'FLDSC', 'FLNSC', 'LWCF', 'FLDS'
+ fincl2 = 'FLNT_OFF', 'FLUT_OFF', 'FLUTC_OFF', 'FLNTC_OFF', 'FLNS_OFF', 'FLDSC_OFF', 'FLNSC_OFF', 'LWCF_OFF', 'FLDS_OFF', 'FLNT', 'FLUT', 'FLUTC', 'FLNTC', 'FLNS', 'FLDSC', 'FLNSC', 'LWCF', 'FLDS'
 
 ! UMRad flags
  flag_mc6 = .true.
