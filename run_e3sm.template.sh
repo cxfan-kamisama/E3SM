@@ -18,14 +18,14 @@ main() {
 # --- Configuration flags ----
 
 # Machine and project
-readonly MACHINE=cori-knl
+readonly MACHINE=perlmutter
 readonly PROJECT="m2136"
 
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="v2.LR.piControl.QRL.test"
-readonly CASE_GROUP="v2.LR"
+readonly CASE_NAME="E3SMv2.UMRad.perlmutter.test"
+readonly CASE_GROUP="E3SMv2.UMRad"
 
 # Code and compilation
 readonly CHECKOUT="20210806"
@@ -39,13 +39,13 @@ readonly START_DATE="0001-01-01"
 
 # Additional options for 'branch' and 'hybrid'
 readonly GET_REFCASE=TRUE
-readonly RUN_REFDIR="/global/cscratch1/sd/cxfan/E3SMv2/v2.LR.piControl/rest/0101-01-01-00000"
+readonly RUN_REFDIR="/pscratch/sd/c/cxfan/E3SMv2/v2.LR.piControl/rest/0101-01-01-00000"
 readonly RUN_REFCASE="v2.LR.piControl"
 readonly RUN_REFDATE="0101-01-01"   # same as MODEL_START_DATE for 'branch', can be different for 'hybrid'
 
 # Set paths
 readonly CODE_ROOT="${HOME}/model/E3SM_v2_UMRad"
-readonly CASE_ROOT="/global/cscratch1/sd/${USER}/E3SMv2/${CASE_NAME}"
+readonly CASE_ROOT="/pscratch/sd/c/cxfan/E3SMv2/${CASE_NAME}"
 
 # Sub-directories
 readonly CASE_BUILD_DIR=${CASE_ROOT}/build
