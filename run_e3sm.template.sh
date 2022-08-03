@@ -22,10 +22,10 @@ readonly MACHINE=cori-knl
 readonly PROJECT="m2136"
 
 # Simulation
-readonly COMPSET="WCYCL1850"
+readonly COMPSET="WCYCL1850-4xCO2"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="20211015.v2.LR.piControl.0101.UMRad.CTRL"
-readonly CASE_GROUP="20211015.v2.LR.piControl.0101.UMRad"
+readonly CASE_NAME="20220803.v2.LR.abrupt4xCO2.0101.UMRad.CTRL"
+readonly CASE_GROUP="20220803.v2.LR.abrupt4xCO2.0101.UMRad"
 
 # Code and compilation
 readonly CHECKOUT="20210806"
@@ -173,10 +173,6 @@ cat << EOF >> user_nl_eam
  flag_scat = .false.
  flag_emis = .false.
  surf_emis_file = '$SURF_EMIS_FILE'
-
-! Additional retuning
- clubb_tk1 = 268.15D0
- gw_convect_hcf = 10.0
 EOF
 
 cat << EOF >> user_nl_elm
