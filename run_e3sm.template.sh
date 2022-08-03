@@ -24,7 +24,7 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850-4xCO2"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="20220803.v2.LR.abrupt4xCO2.0101.UMRad.CTRL"
+readonly CASE_NAME="20220803.v2.LR.abrupt4xCO2.0101.UMRad.Scat"
 readonly CASE_GROUP="20220803.v2.LR.abrupt4xCO2.0101.UMRad"
 
 # Code and compilation
@@ -170,7 +170,7 @@ cat << EOF >> user_nl_eam
 ! UMRad flags
  flag_mc6 = .true.
  flag_rtr2 = .true.
- flag_scat = .false.
+ flag_scat = .true.
  flag_emis = .false.
  surf_emis_file = '$SURF_EMIS_FILE'
 EOF
