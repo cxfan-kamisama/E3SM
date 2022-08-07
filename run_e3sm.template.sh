@@ -24,8 +24,8 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="E3SMv2.UMRad.perlmutter.test"
-readonly CASE_GROUP="E3SMv2.UMRad"
+readonly CASE_NAME="E3SMv2.pm.UMRad.piControl.0101.noScatEmis"
+readonly CASE_GROUP="E3SMv2.pm.UMRad"
 
 # Code and compilation
 readonly CHECKOUT="20210806"
@@ -56,6 +56,8 @@ readonly CASE_ARCHIVE_DIR=${CASE_ROOT}/archive
 #               'M_1x10_ndays', 'M2_1x10_ndays', 'M80_1x10_ndays', 'L_1x10_ndays'
 #  or 'production' for full simulation
 readonly run='production'
+readonly debug_queue=false
+
 if [ "${run}" != "production" ]; then
 
   # Short test simulations
@@ -68,25 +70,32 @@ if [ "${run}" != "production" ]; then
   readonly CASE_SCRIPTS_DIR=${CASE_ROOT}/tests/${run}/case_scripts
   readonly CASE_RUN_DIR=${CASE_ROOT}/tests/${run}/run
   readonly PELAYOUT=${layout}
-  readonly WALLTIME="2:00:00"
   readonly STOP_OPTION=${units}
   readonly STOP_N=${length}
   readonly REST_OPTION=${STOP_OPTION}
   readonly REST_N=${STOP_N}
-  readonly RESUBMIT=${resubmit}
   readonly DO_SHORT_TERM_ARCHIVING=false
+
+  if [ $debug_queue == "true" ]; then
+    readonly WALLTIME="0:30:00"
+    readonly RESUBMIT=0
+    echo "WARNING: You have to resubmit the job for ${resubmit} times to complete the test, since you submit it to the debug queue."
+  else
+    readonly WALLTIME="2:00:00"
+    readonly RESUBMIT=${resubmit}
+  fi
 
 else
 
   # Production simulation
   readonly CASE_SCRIPTS_DIR=${CASE_ROOT}/case_scripts
   readonly CASE_RUN_DIR=${CASE_ROOT}/run
-  readonly PELAYOUT="M"
-  readonly WALLTIME="0:30:00"
-  readonly STOP_OPTION="ndays"
-  readonly STOP_N="1"
-  readonly REST_OPTION="ndays"
-  readonly REST_N="1"
+  readonly PELAYOUT="L"
+  readonly WALLTIME="12:00:00"
+  readonly STOP_OPTION="nyears"
+  readonly STOP_N="2"
+  readonly REST_OPTION="nyears"
+  readonly REST_N="2"
   readonly RESUBMIT="0"
   readonly DO_SHORT_TERM_ARCHIVING=false
 fi
@@ -97,6 +106,9 @@ readonly HIST_N="5"
 
 # Leave empty (unless you understand what it does)
 readonly OLD_EXECUTABLE=""
+
+# UMRad: Surface emissivity file
+readonly SURF_EMIS_FILE="/pscratch/sd/c/cxfan/data/surf_emis/surface_emissivity_1x1_to_ne30pg2_RRTMG_53deg.ra_c20210416.nc"
 
 # --- Toggle flags for what to do ----
 do_fetch_code=false
@@ -143,11 +155,18 @@ echo $'\n----- All done -----\n'
 user_nl() {
 
 cat << EOF >> user_nl_eam
- nhtfrq =   1
- mfilt  = 48
+ nhtfrq = 0
+ mfilt  = 1
  avgflag_pertape = 'A'
  fexcl1 = 'CFAD_SR532_CAL', 'LINOZ_DO3', 'LINOZ_DO3_PSC', 'LINOZ_O3CLIM', 'LINOZ_O3COL', 'LINOZ_SSO3', 'hstobie_linoz'
  fincl1 = 'QRLC','QRL','IWC','LWC','CLDICE','CLDLIQ'
+
+! UMRad flags
+ flag_mc6 = .false.
+ flag_rtr2 = .false.
+ flag_scat = .false.
+ flag_emis = .false.
+ surf_emis_file = '$SURF_EMIS_FILE'
 
 ! Additional retuning
  clubb_tk1 = 268.15D0
@@ -272,6 +291,11 @@ case_setup() {
     # Short term archiving
     ./xmlchange DOUT_S=${DO_SHORT_TERM_ARCHIVING^^}
     ./xmlchange DOUT_S_ROOT=${CASE_ARCHIVE_DIR}
+
+    # Debug queue
+    if [ ${debug_queue} == "true" ]; then
+        ./xmlchange JOB_QUEUE="debug"
+    fi
 
     # Build with COSP, except for a data atmosphere (datm)
     if [ `./xmlquery --value COMP_ATM` == "datm"  ]; then
