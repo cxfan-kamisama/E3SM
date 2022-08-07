@@ -24,7 +24,7 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="E3SMv2.pm.UMRad.piControl.0101.noScatEmis"
+readonly CASE_NAME="E3SMv2.pm.UMRad.piControl.0101.Full"
 readonly CASE_GROUP="E3SMv2.pm.UMRad"
 
 # Code and compilation
@@ -162,10 +162,10 @@ cat << EOF >> user_nl_eam
  fincl1 = 'QRLC','QRL','IWC','LWC','CLDICE','CLDLIQ'
 
 ! UMRad flags
- flag_mc6 = .false.
- flag_rtr2 = .false.
- flag_scat = .false.
- flag_emis = .false.
+ flag_mc6 = .true.
+ flag_rtr2 = .true.
+ flag_scat = .true.
+ flag_emis = .true.
  surf_emis_file = '$SURF_EMIS_FILE'
 
 ! Additional retuning
