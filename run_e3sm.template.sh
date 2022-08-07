@@ -44,7 +44,7 @@ readonly RUN_REFCASE="v2.LR.piControl"
 readonly RUN_REFDATE="0101-01-01"   # same as MODEL_START_DATE for 'branch', can be different for 'hybrid'
 
 # Set paths
-readonly CODE_ROOT="${HOME}/model/E3SM_v2_UMRad"
+readonly CODE_ROOT="${HOME}/perlmutter/E3SM_v2_UMRad_pm"
 readonly CASE_ROOT="/pscratch/sd/c/cxfan/E3SMv2/${CASE_NAME}"
 
 # Sub-directories
@@ -390,9 +390,6 @@ runtime_options() {
 
     # Coupler budgets (always on)
     ./xmlchange BUDGETS=TRUE
-
-    # Job queue (debug)
-    ./xmlchange JOB_QUEUE=debug
 
     # Set resubmissions
     if (( RESUBMIT > 0 )); then
