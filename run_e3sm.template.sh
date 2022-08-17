@@ -24,7 +24,7 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="E3SMv2.pm.UMRad.piControl.0101.Full"
+readonly CASE_NAME="E3SMv2.pm.UMRad.piControl.0101.FixRTR2.Full"
 readonly CASE_GROUP="E3SMv2.pm.UMRad"
 
 # Code and compilation
