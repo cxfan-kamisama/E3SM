@@ -96,6 +96,9 @@ logical,public :: flag_mc6   = .false. ! Use MC6 (MODIS Collection 6) LW ice opt
 logical,public :: flag_emis  = .false. ! Use surface emissivit.
 logical,public :: flag_rtr2  = .false. ! Use 2/4-stream LW radiation transfer solver.
 logical,public :: flag_scat  = .false. ! Use MC6 (MODIS Collection 6) LW ice scattering.
+
+integer, parameter  :: nlen = 256     ! Length of character strings
+character(len=nlen), public :: surf_emis_file    ! surface emissivity filename
 ! <--- end add.
 
 !===============================================================================
@@ -125,7 +128,8 @@ subroutine radiation_readnl(nlfile, dtime_in)
    ! Variables defined in namelist
    namelist /radiation_nl/ iradsw, iradlw, irad_always, &
                            use_rad_dt_cosz, spectralflux, &
-                           flag_mc6, flag_emis, flag_rtr2, flag_scat
+                           flag_mc6, flag_emis, flag_rtr2, flag_scat, &
+                           surf_emis_file
 
    ! Read the namelist, only if called from master process
    ! TODO: better documentation and cleaner logic here?
@@ -155,6 +159,7 @@ subroutine radiation_readnl(nlfile, dtime_in)
    call mpibcast(flag_emis, 1, mpi_logical, mstrid, mpicom, ierr)
    call mpibcast(flag_rtr2, 1, mpi_logical, mstrid, mpicom, ierr)
    call mpibcast(flag_scat, 1, mpi_logical, mstrid, mpicom, ierr)   
+   call mpibcast(surf_emis_file, len(surf_emis_file), mpi_character, mstrid, mpicom, ierr)
 #endif
 
    ! Convert iradsw, iradlw and irad_always from hours to timesteps if necessary
@@ -170,10 +175,6 @@ subroutine radiation_readnl(nlfile, dtime_in)
    ! Print runtime options to log.
    if (masterproc) then
       call radiation_printopts()
-      ! Write U-MICH swithces to log file -->
-      write(iulog,*) 'RRTMG U-MICH LW radiation scheme parameters:'
-      write(iulog,*) 'flag_mc6=',flag_mc6,', flag_emis=', flag_emis,&
-                   ', flag_rtr2=',flag_rtr2,', flag_scat=', flag_scat
    end if
 
 end subroutine radiation_readnl
@@ -296,6 +297,13 @@ subroutine radiation_printopts
 10 format(' Execute SW/LW radiation continuously for the first ',i5, ' timestep(s) of this run')
 20 format(' Frequency of Shortwave Radiation calc. (IRADSW)     ',i5/, &
           ' Frequency of Longwave Radiation calc. (IRADLW)      ',i5)
+
+   write(iulog,*)'--- flag_emis = ',flag_emis
+   write(iulog,*)'--- flag_rtr2 = ',flag_rtr2
+   write(iulog,*)'--- flag_mc6 = ',flag_mc6
+   write(iulog,*)'--- flag_scat = ',flag_scat
+   if (flag_emis) &
+      write(iulog,*)'--- surf_emis_file = ',surf_emis_file
 
 end subroutine radiation_printopts
 
@@ -755,38 +763,38 @@ end function radiation_nextsw_cday
           call addfld('TAU_SNO_SUM'//diag(icall), horiz_only,'A',     ' ', 'Snow optical depth (vertical sum)')
           call addfld('TAU_TOT_SUM'//diag(icall), horiz_only,'A',     ' ', 'All clouds optical depth (vertical sum)')
 
-!          call addfld('EMIS01'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 01 - 10-350 cm-1', &
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS02'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 02 - 350-500 cm-1', &
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS03'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 03 - 500-630 cm-1', &
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS04'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 04 - 630-700 cm-1', &
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS05'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 05 - 700-820 cm-1', &
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS06'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 06 - 820-980 cm-1', &
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS07'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 07 - 980-1080 cm-1', &
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS08'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 08 - 1080-1180 cm-1',& 
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS09'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 09 - 1180-1390 cm-1',& 
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS10'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 10 - 1390-1480 cm-1',& 
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS11'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 11 - 1480-1800 cm-1',& 
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS12'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 12 - 1800-2080 cm-1',&
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS13'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 13 - 2080-2250 cm-1',&
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS14'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 14 - 2250-2380 cm-1',&
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS15'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 15-  2380-2600 cm-1',&
-!                  sampling_seq='rad_lwsw')
-!          call addfld('EMIS16'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 16 - 2600-3250 cm-1',&
-!                  sampling_seq='rad_lwsw')
+         call addfld('EMIS01'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 01 - 10-350 cm-1', &
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS02'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 02 - 350-500 cm-1', &
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS03'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 03 - 500-630 cm-1', &
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS04'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 04 - 630-700 cm-1', &
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS05'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 05 - 700-820 cm-1', &
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS06'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 06 - 820-980 cm-1', &
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS07'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 07 - 980-1080 cm-1', &
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS08'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 08 - 1080-1180 cm-1',& 
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS09'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 09 - 1180-1390 cm-1',& 
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS10'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 10 - 1390-1480 cm-1',& 
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS11'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 11 - 1480-1800 cm-1',& 
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS12'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 12 - 1800-2080 cm-1',&
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS13'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 13 - 2080-2250 cm-1',&
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS14'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 14 - 2250-2380 cm-1',&
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS15'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 15-  2380-2600 cm-1',&
+                 sampling_seq='rad_lwsw')
+         call addfld('EMIS16'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 16 - 2600-3250 cm-1',&
+                 sampling_seq='rad_lwsw')
       ! <--- U-MICH team on Dec.18, 2019 add other fields.
 
           if (history_amwg) then
@@ -1144,19 +1152,19 @@ end function radiation_nextsw_cday
     real(r8) :: ts_lw(pcols)                ! surface temperature derived from longwave upward flux 
                                             ! using realistic emissivity values    
    ! for output test only                                             
-    !real(r8) :: tau_liq (pcols,pver) ! liquid optical depth (vertical sum)
-    !real(r8) :: tau_ice (pcols,pver) ! ice optical depth (vertical sum)
-    !real(r8) :: taua_ice (pcols,pver) ! ice optical depth (absorption, vertical sum)
-    !real(r8) :: ssa_ice (pcols,pver) ! ice optical depth (vertical sum)
-    !real(r8) :: asm_ice (pcols,pver) ! ice optical depth (vertical sum)
-    !real(r8) :: tau_sno (pcols,pver) ! snow optical depth (vertical sum)
-    !real(r8) :: tau_tot (pcols,pver) ! all clouds optical depth (vertical sum)
+    real(r8) :: tau_liq (pcols,pver) ! liquid optical depth (vertical sum)
+    real(r8) :: tau_ice (pcols,pver) ! ice optical depth (vertical sum)
+    real(r8) :: taua_ice (pcols,pver) ! ice optical depth (absorption, vertical sum)
+    real(r8) :: ssa_ice (pcols,pver) ! ice optical depth (vertical sum)
+    real(r8) :: asm_ice (pcols,pver) ! ice optical depth (vertical sum)
+    real(r8) :: tau_sno (pcols,pver) ! snow optical depth (vertical sum)
+    real(r8) :: tau_tot (pcols,pver) ! all clouds optical depth (vertical sum)
 
-    !real(r8) :: tau_liq_sum (pcols) ! liquid optical depth (vertical sum)
-    !real(r8) :: taua_ice_sum (pcols) ! liquid optical depth (absorption, vertical sum)
-    !real(r8) :: tau_ice_sum (pcols) ! ice optical depth (vertical sum)
-    !real(r8) :: tau_sno_sum (pcols) ! snow optical depth (vertical sum)
-    !real(r8) :: tau_tot_sum (pcols) ! all clouds optical depth (vertical sum)
+    real(r8) :: tau_liq_sum (pcols) ! liquid optical depth (vertical sum)
+    real(r8) :: taua_ice_sum (pcols) ! liquid optical depth (absorption, vertical sum)
+    real(r8) :: tau_ice_sum (pcols) ! ice optical depth (vertical sum)
+    real(r8) :: tau_sno_sum (pcols) ! snow optical depth (vertical sum)
+    real(r8) :: tau_tot_sum (pcols) ! all clouds optical depth (vertical sum)
 ! <---
 !----------------------------------------------------------------------
 
@@ -1181,18 +1189,18 @@ end function radiation_nextsw_cday
     ts_lw(:)            = 0._r8 
 
    ! for test only
-    !tau_liq (:,:)   = 0._r8
-    !taua_ice (:,:)  = 0._r8
-    !tau_ice (:,:)   = 0._r8
-    !ssa_ice (:,:)   = 0._r8
-    !asm_ice (:,:)   = 0._r8
-    !tau_sno (:,:)   = 0._r8 
-    !tau_tot (:,:)   = 0._r8 
-    !tau_liq_sum (:) = 0._r8
-    !taua_ice_sum (:)= 0._r8 
-    !tau_ice_sum (:) = 0._r8
-    !tau_sno_sum (:) = 0._r8
-    !tau_tot_sum (:) = 0._r8
+    tau_liq (:,:)   = 0._r8
+    taua_ice (:,:)  = 0._r8
+    tau_ice (:,:)   = 0._r8
+    ssa_ice (:,:)   = 0._r8
+    asm_ice (:,:)   = 0._r8
+    tau_sno (:,:)   = 0._r8 
+    tau_tot (:,:)   = 0._r8 
+    tau_liq_sum (:) = 0._r8
+    taua_ice_sum (:)= 0._r8 
+    tau_ice_sum (:) = 0._r8
+    tau_sno_sum (:) = 0._r8
+    tau_tot_sum (:) = 0._r8
 
 ! <---  U-MICH team on Dec.18, 2019 initialization 
     
@@ -1405,6 +1413,13 @@ end function radiation_nextsw_cday
                 call endrun('liqcldoptics must be either slingo or gammadist')
              end select
              cld_lw_abs(:,1:ncol,:) = liq_lw_abs(:,1:ncol,:) + ice_lw_abs(:,1:ncol,:)
+             ! U-MICH output for value check
+             tau_liq(:,:)=liq_lw_abs(2,:,:)
+             tau_ice(:,:)=ice_lw_abs(2,:,:)
+             taua_ice(:,:)=ice_lw_abs(2,:,:)
+             tau_liq_sum(:)=sum(liq_lw_abs(2,:,:),dim=2)
+             tau_ice_sum(:)=sum(ice_lw_abs(2,:,:),dim=2)
+             taua_ice_sum(:)=sum(ice_lw_abs(2,:,:),dim=2)
           endif
           !call cloud_rad_props_get_lw(state,  pbuf, cld_lw_abs, oldliq=.true., oldice=.true.)
           !call cloud_rad_props_get_lw(state,  pbuf, cld_lw_abs, oldcloud=.true.)
@@ -1413,6 +1428,9 @@ end function radiation_nextsw_cday
           if (cldfsnow_idx > 0) then
             ! add in snow
              call snow_cloud_get_rad_props_lw(state, pbuf, snow_lw_abs)
+             ! U-MICH output for value check
+             tau_sno(:,:)=snow_lw_abs(2,:,:)
+             tau_sno_sum(:)=sum(snow_lw_abs(2,:,:),dim=2)
              do i=1,ncol
                 do k=1,pver
                    cldfprime(i,k)=max(cld(i,k),cldfsnow(i,k))
@@ -1435,8 +1453,8 @@ end function radiation_nextsw_cday
           c_cld_lw_asm(:,:,:) = 0._r8
 
       ! U-MICH test only
-         !tau_tot(:,:) = c_cld_lw_ext(2,:,:)
-         !tau_tot_sum(:) = sum(c_cld_lw_ext(2,:,:),dim=2)
+         tau_tot(:,:) = c_cld_lw_ext(2,:,:)
+         tau_tot_sum(:) = sum(c_cld_lw_ext(2,:,:),dim=2)
 
 ! U-MICH team on Dec.18, 2019, MC6 ice optics with ice scattering--->
       else ! (flag_mc6) use MC6 ice optics    
@@ -1467,15 +1485,18 @@ end function radiation_nextsw_cday
          cld_lw_abs_mc6(:,1:ncol,:) = liq_lw_abs(:,1:ncol,:) + ice_lw_abs_mc6(:,1:ncol,:)
          cld_lw_ext_mc6(:,1:ncol,:) = liq_lw_abs(:,1:ncol,:) + ice_lw_ext_mc6(:,1:ncol,:)
 
+         ! assign to the old variables for COSP
+         cld_lw_abs(:,1:ncol,:) = cld_lw_abs_mc6(:,1:ncol,:)
+
          ! U-MICH output for value check
-         !tau_liq(:,:)=liq_lw_abs(2,:,:)
-         !tau_ice(:,:)=ice_lw_ext_mc6(2,:,:)
-         !taua_ice(:,:)=ice_lw_abs_mc6(2,:,:)
-         !ssa_ice(:,:)=ice_lw_ssa_mc6(2,:,:)
-         !asm_ice(:,:)=ice_lw_asm_mc6(2,:,:)
-         !tau_liq_sum(:)=sum(liq_lw_abs(2,:,:),dim=2)
-         !tau_ice_sum(:)=sum(ice_lw_ext_mc6(2,:,:),dim=2)
-         !taua_ice_sum(:)=sum(ice_lw_abs_mc6(2,:,:),dim=2)
+         tau_liq(:,:)=liq_lw_abs(2,:,:)
+         tau_ice(:,:)=ice_lw_ext_mc6(2,:,:)
+         taua_ice(:,:)=ice_lw_abs_mc6(2,:,:)
+         ssa_ice(:,:)=ice_lw_ssa_mc6(2,:,:)
+         asm_ice(:,:)=ice_lw_asm_mc6(2,:,:)
+         tau_liq_sum(:)=sum(liq_lw_abs(2,:,:),dim=2)
+         tau_ice_sum(:)=sum(ice_lw_ext_mc6(2,:,:),dim=2)
+         taua_ice_sum(:)=sum(ice_lw_abs_mc6(2,:,:),dim=2)
 
          ! snow cloud optics
          if (cldfsnow_idx > 0) then
@@ -1483,8 +1504,8 @@ end function radiation_nextsw_cday
            call snow_cloud_get_rad_props_lw(state, pbuf, snow_lw_abs)
 
           ! U-MICH output for value check
-           !tau_sno(:,:)=snow_lw_abs(2,:,:)
-           !tau_sno_sum(:)=sum(snow_lw_abs(2,:,:),dim=2)
+           tau_sno(:,:)=snow_lw_abs(2,:,:)
+           tau_sno_sum(:)=sum(snow_lw_abs(2,:,:),dim=2)
 
            do i=1,ncol
              do k=1,pver
@@ -1560,7 +1581,10 @@ end function radiation_nextsw_cday
           c_cld_lw_ssa  (:,:,:) = 0._r8
           c_cld_lw_asm  (:,:,:) = 0._r8
         endif
-
+      
+        ! U-MICH test only
+        tau_tot(:,:) = c_cld_lw_ext(2,:,:)
+        tau_tot_sum(:) = sum(c_cld_lw_ext(2,:,:),dim=2)
        endif !(.not.flag_mc6)
 
        endif !(dolw)
@@ -1807,6 +1831,37 @@ end function radiation_nextsw_cday
                   call outfld('FLN200'//diag(icall),fln200,pcols,lchnk)
                   call outfld('FLN200C'//diag(icall),fln200c,pcols,lchnk)
                   call outfld('FLDS'//diag(icall),cam_out%flwds ,pcols,lchnk)
+
+                  !U-MICH test only
+                  call outfld('TAU_LIQ'//diag(icall), tau_liq(:,:), pcols,lchnk)
+                  call outfld('TAU_ICE'//diag(icall), tau_ice(:,:), pcols,lchnk)
+                  call outfld('TAUA_ICE'//diag(icall), taua_ice(:,:), pcols,lchnk)
+                  call outfld('SSA_ICE'//diag(icall), ssa_ice(:,:), pcols,lchnk)
+                  call outfld('G_ICE'//diag(icall), asm_ice(:,:), pcols,lchnk)
+                  call outfld('TAU_SNO'//diag(icall), tau_sno(:,:), pcols,lchnk)
+                  call outfld('TAU_TOT'//diag(icall), tau_tot(:,:), pcols,lchnk)
+                  call outfld('TAU_LIQ_SUM'//diag(icall), tau_liq_sum(:), pcols,lchnk)
+                  call outfld('TAU_ICE_SUM'//diag(icall), tau_ice_sum(:), pcols,lchnk)
+                  call outfld('TAUA_ICE_SUM'//diag(icall), taua_ice_sum(:), pcols,lchnk)
+                  call outfld('TAU_SNO_SUM'//diag(icall), tau_sno_sum(:), pcols,lchnk)
+                  call outfld('TAU_TOT_SUM'//diag(icall), tau_tot_sum(:), pcols,lchnk)
+
+                  call outfld('EMIS01'//diag(icall), surface_emis(:,1), pcols,lchnk)
+                  call outfld('EMIS02'//diag(icall), surface_emis(:,2), pcols,lchnk)
+                  call outfld('EMIS03'//diag(icall), surface_emis(:,3), pcols,lchnk)
+                  call outfld('EMIS04'//diag(icall), surface_emis(:,4), pcols,lchnk)
+                  call outfld('EMIS05'//diag(icall), surface_emis(:,5), pcols,lchnk)
+                  call outfld('EMIS06'//diag(icall), surface_emis(:,6), pcols,lchnk)
+                  call outfld('EMIS07'//diag(icall), surface_emis(:,7), pcols,lchnk)
+                  call outfld('EMIS08'//diag(icall), surface_emis(:,8), pcols,lchnk)
+                  call outfld('EMIS09'//diag(icall), surface_emis(:,9), pcols,lchnk)
+                  call outfld('EMIS10'//diag(icall), surface_emis(:,10), pcols,lchnk)
+                  call outfld('EMIS11'//diag(icall), surface_emis(:,11), pcols,lchnk)
+                  call outfld('EMIS12'//diag(icall), surface_emis(:,12), pcols,lchnk)
+                  call outfld('EMIS13'//diag(icall), surface_emis(:,13), pcols,lchnk)
+                  call outfld('EMIS14'//diag(icall), surface_emis(:,14), pcols,lchnk)
+                  call outfld('EMIS15'//diag(icall), surface_emis(:,15), pcols,lchnk)
+                  call outfld('EMIS16'//diag(icall), surface_emis(:,16), pcols,lchnk)
 
               end if
           end do
