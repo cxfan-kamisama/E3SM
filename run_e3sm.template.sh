@@ -115,7 +115,7 @@ do_fetch_code=false
 do_create_newcase=true
 do_case_setup=true
 do_case_build=true
-do_case_submit=false
+do_case_submit=true
 
 # --- Now, do the work ---
 
