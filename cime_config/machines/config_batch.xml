@@ -265,6 +265,16 @@
     </directives>
   </batch_system>
 
+  <batch_system MACH="perlmutter" type="nersc_slurm">
+    <directives>
+      <directive> --constraint=cpu</directive>
+    </directives>
+    <queues>
+      <queue walltimemax="12:00:00" nodemax="1500" default="true">regular</queue>
+      <queue walltimemax="00:30:00" nodemax="4" strict="true">debug</queue>
+    </queues>
+  </batch_system>
+
     <batch_system MACH="blues" type="slurm">
       <queues>
         <queue walltimemax="01:00:00" nodemax="6" default="true" strict="true">biggpu</queue>
