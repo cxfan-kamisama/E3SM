@@ -32,6 +32,11 @@
       real(kind=r8) :: absliq0
       real(kind=r8) , dimension(58,16) :: absliq1
 
+      real(kind=r8) , dimension(2,7,16) :: absliq2 ! CPKuo@TAMU  
+      real(kind=r8) , dimension(2,7,16) :: extliq2 ! CPKuo@TAMU  
+      real(kind=r8) , dimension(2,7,16) :: ssaliq2 ! CPKuo@TAMU  
+      real(kind=r8) , dimension(2,7,16) :: asyliq2 ! CPKuo@TAMU  
+
       real(kind=r8) , dimension(2,7,16) :: absice4 ! U-MICH team Dec.18, 2019
       real(kind=r8) , dimension(2,7,16) :: extice4 ! U-MICH team Dec.18, 2019  
       real(kind=r8) , dimension(2,7,16) :: ssaice4 ! U-MICH team Dec.18, 2019  

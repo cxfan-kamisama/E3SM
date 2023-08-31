@@ -29,6 +29,7 @@ public :: &
    get_ice_optics_sw,             & ! return Mitchell SW ice radiative properties
    ice_cloud_get_rad_props_lw,    & ! Mitchell LW ice rad props
    mc6_ice_get_rad_props_lw,      & ! MC6 ice optics scheme, added by U-MICH team on Dec.18
+   mc6_liquid_get_rad_props_lw,   & ! MC6 liquid optics scheme, added by U-MICH team
    get_liquid_optics_sw,          & ! return Conley SW rad props
    liquid_cloud_get_rad_props_lw, & ! return Conley LW rad props
    snow_cloud_get_rad_props_lw,   &
@@ -52,7 +53,7 @@ real(r8), allocatable :: abs_lw_ice(:,:)
 ! 
 ! indexes into pbuf for optical parameters of MG clouds
 ! 
-   integer :: i_dei, i_mu, i_lambda, i_iciwp, i_iclwp, i_des, i_icswp, i_cld
+   integer :: i_dei, i_rel, i_mu, i_lambda, i_iciwp, i_iclwp, i_des, i_icswp, i_cld
 
 ! indexes into constituents for old optics
    integer :: &
@@ -101,6 +102,7 @@ subroutine cloud_rad_props_init()
    call oldcloud_init
 
    i_dei    = pbuf_get_index('DEI',errcode=err)
+   i_rel    = pbuf_get_index('REL',errcode=err)
    i_mu     = pbuf_get_index('MU',errcode=err)
    i_lambda = pbuf_get_index('LAMBDAC',errcode=err)
    i_iciwp  = pbuf_get_index('ICIWP',errcode=err)
@@ -797,11 +799,9 @@ subroutine mc6_ice_get_rad_props_lw(state, pbuf, ext_od, abs_od, ssa_od, asm_od,
 !   yihsuan@umich.edu
 !-----------------------------------------------------
 
-   use rrlw_cld, only: abscld1, absliq0, absliq1, &
-                       absice0, absice1, absice2, absice3, &
-                       absice4, extice4, ssaice4, asyice4, &! CPKuo@TAMU
-                       absice5, extice5, ssaice5, asyice5, &! CPKuo@TAMU
-                       absice6, extice6, ssaice6, asyice6   ! CPKuo@TAMU
+   use rrlw_cld, only: extice4, ssaice4, asyice4, &! CPKuo@TAMU
+                       extice5, ssaice5, asyice5, &! CPKuo@TAMU
+                       extice6, ssaice6, asyice6   ! CPKuo@TAMU
 !--- Input arguments ---!
    type(physics_state), intent(in)     :: state
    type(physics_buffer_desc), pointer  :: pbuf(:)
@@ -1098,5 +1098,191 @@ subroutine mc6_ice_get_rad_props_lw(state, pbuf, ext_od, abs_od, ssa_od, asm_od,
 end subroutine mc6_ice_get_rad_props_lw
 
 !==============================================================================
+
+subroutine mc6_liquid_get_rad_props_lw(state, pbuf, ext_od, abs_od, ssa_od, asm_od, oldliqwp)
+   use physconst,      only: gravit
+   use rrlw_cld,       only: extliq2, ssaliq2, asyliq2
+
+   !--- Input arguments ---!
+   type(physics_state), intent(in)     :: state
+   type(physics_buffer_desc), pointer  :: pbuf(:)
+   logical , intent(in) :: oldliqwp
+
+   !--- Output arguments ---!
+   real(r8), intent(out) :: ext_od  (nlwbands,pcols,pver)  ! extinction optical depth
+   real(r8), intent(out) :: abs_od  (nlwbands,pcols,pver)  ! absorption optical depth
+   real(r8), intent(out) :: ssa_od  (nlwbands,pcols,pver)  ! single scattering albedo
+   real(r8), intent(out) :: asm_od (nlwbands,pcols,pver)   ! asymmetric factor
+
+   !--- Local ---!
+   integer :: i,k,ib,ncol,lchnk,itim
+   real(r8) :: dialiq                        ! cloud liquid effective diameter (microns)
+   real(r8) :: invrad                        ! inverse of diameter (Kuo et al., 2020) 
+   real(r8) :: taucloud, ssacloud, asycloud, asmcloud, fpeak
+   real(r8), pointer, dimension(:,:) :: cldn    ! CAM cloud fraction
+   real(r8), pointer, dimension(:,:) :: iclwpth ! CAM in-cloud liquid water path (kg/m2)
+   real(r8), pointer, dimension(:,:) :: rel     ! CAM liquid effective radius from mg scheme (microns)
+   real(r8) :: iclwp(pcols,pver)             ! work array of in-cloud liquid water path (kg/m2) 
+   real(r8) :: extcoliq(nlwbands)            ! liquid mass-extinction coefficients of TAMU scheme (m2/g)
+   real(r8) :: ssacoliq(nlwbands)            ! liquid single scattering albedo of TAMU scheme (unitless)
+   real(r8) :: asmcoliq(nlwbands)            ! liquid asymmetric factor of TAMU scheme (unitless)
+   real(r8) :: ext_tamu(nlwbands,pcols,pver) ! liquid cloud extinction optical thickness (unitless)
+   real(r8) :: abs_tamu(nlwbands,pcols,pver) ! liquid cloud absorption optical thickness (unitless)
+   real(r8) :: ssa_tamu(nlwbands,pcols,pver) ! liquid cloud single scattering albedo (unitless)
+   real(r8) :: asm_tamu(nlwbands,pcols,pver) ! liquid cloud asymmetric factor (unitless) 
+
+   !----------------------------
+   ! initialize return arrays
+   !----------------------------   
+   ext_tamu(:,:,:)   = 0._r8
+   abs_tamu(:,:,:)   = 0._r8
+   ssa_tamu(:,:,:)   = 0._r8
+   asm_tamu(:,:,:)   = 0._r8
+
+   ext_od(:,:,:)   = 0._r8
+   abs_od(:,:,:)   = 0._r8
+   ssa_od(:,:,:)   = 0._r8
+   asm_od(:,:,:)   = 0._r8
+
+   ncol = state%ncol
+   lchnk = state%lchnk
+
+   !-----------------
+   ! get CAM fields
+   !-----------------
+
+   itim = pbuf_old_tim_idx()
+   call pbuf_get_field(pbuf, i_rel, rel)
+   call pbuf_get_field(pbuf, i_cld, cldn, start=(/1,1,itim/), kount=(/pcols,pver,1/))
+
+   if (oldliqwp) then
+      do k=1,pver
+         do i = 1,ncol
+            iclwp(i,k) = state%q(i,k,ixcldliq)*state%pdel(i,k)/(gravit*max(0.01_r8,cldn(i,k)))
+         end do
+      end do
+    else
+      if (i_iclwp<=0) then 
+         call endrun('mc6_liquid_get_rad_props_lw: oldliqwp must be set to true since ICLWP was not found in pbuf')
+      endif
+      call pbuf_get_field(pbuf, i_iclwp, iclwpth)
+      iclwp = iclwpth
+    endif
+
+   !--------------------------------------------------------
+   ! compute absorption coefficient and cloud optical depth
+   !--------------------------------------------------------
+   do i = 1,ncol
+      do k = 1,pver
+         dialiq = rel(i,k) * 2.0_r8 ! effective diameter
+         extcoliq(:) = 0._r8
+         ssacoliq(:) = 0._r8
+         asmcoliq(:) = 0._r8
+
+         !*** if there is no liquid cloud ***
+         if( iclwp(i,k) < 1.e-80_r8 .or. dialiq .eq. 0._r8) then
+            ext_tamu(:,i,k) = 0._r8
+            abs_tamu(:,i,k) = 0._r8
+            ssa_tamu(:,i,k) = 0._r8
+            asm_tamu(:,i,k) = 0._r8
+            cycle
+         end if
+
+         !*** if there is an liquid cloud layer ***
+         ! limit droplet effective diameter
+         dialiq = max(min(dialiq, 500.0_r8), 3.0_r8)  
+         ! upper and lower bound of droplet effective diameter of MC6 scheme is 500 and 3 microns
+         ! because mass extinction coefficient larger than 500um vary slightly with diameter,
+         ! apply mass extinction coefficient of 500um to those larger ones is not a bad approximation
+         ! Chia-Pang Kuo @ TAMU, personal communication
+
+         ! if droplet effective diameter in approciate range (3-500 microns)
+         if (dialiq .ge. 3.0_r8 .and. dialiq .le. 500.0_r8) then
+            invrad = 1.0/dialiq - 0.05_r8
+            do ib=1,nlwbands           
+               if (dialiq .ge. 20.0_r8) then
+                  extcoliq(ib) = ((extliq2(1,1,ib) * invrad + &
+                                 extliq2(1,2,ib)) * invrad + &
+                                 extliq2(1,3,ib)) * invrad + &
+                                 extliq2(1,4,ib)
+                  ssacoliq(ib) = ((ssaliq2(1,1,ib) * invrad + &
+                                 ssaliq2(1,2,ib)) * invrad + &
+                                 ssaliq2(1,3,ib)) * invrad + &
+                                 ssaliq2(1,4,ib)
+                  asmcoliq(ib) = ((asyliq2(1,1,ib) * invrad + &
+                                 asyliq2(1,2,ib)) * invrad + &
+                                 asyliq2(1,3,ib)) * invrad + &
+                                 asyliq2(1,4,ib)
+
+               else
+                  extcoliq(ib) = (((((extliq2(2,1,ib) * invrad + &
+                                    extliq2(2,2,ib)) * invrad + &
+                                    extliq2(2,3,ib)) * invrad + &
+                                    extliq2(2,4,ib)) * invrad + &
+                                    extliq2(2,5,ib)) * invrad + &
+                                    extliq2(2,6,ib)) * invrad + &
+                                    extliq2(2,7,ib)
+                  ssacoliq(ib) = (((((ssaliq2(2,1,ib) * invrad + &
+                                    ssaliq2(2,2,ib)) * invrad + &
+                                    ssaliq2(2,3,ib)) * invrad + &
+                                    ssaliq2(2,4,ib)) * invrad + &
+                                    ssaliq2(2,5,ib)) * invrad + &
+                                    ssaliq2(2,6,ib)) * invrad + &
+                                    ssaliq2(2,7,ib)
+                  asmcoliq(ib) = (((((asyliq2(2,1,ib) * invrad + &
+                                    asyliq2(2,2,ib)) * invrad + &
+                                    asyliq2(2,3,ib)) * invrad + &
+                                    asyliq2(2,4,ib)) * invrad + &
+                                    asyliq2(2,5,ib)) * invrad + &
+                                    asyliq2(2,6,ib)) * invrad + &
+                                    asyliq2(2,7,ib)
+               endif  ! end if of dialiq .ge. 20.
+            enddo  ! end do of lwbands for cloud radiative coefficients
+
+            ! error check
+            do ib=1,nlwbands
+               if (ssacoliq(ib)<0.0_r8 .or. ssacoliq(ib)>1.0_r8) then 
+                   write(iulog,*)'ssacoliq = ',ssacoliq(ib), 'at band ',ib, 'with dei=',dialiq
+                   call endrun('ssacoliq is out of [0,1] in U-MICH Rad (cloud_rad_props.F90).')
+               end if
+               if (asmcoliq(ib)<0.0_r8 .or. asmcoliq(ib)>1.0_r8) then 
+                   write(iulog,*)'asmcoliq = ',asmcoliq(ib), 'at band ',ib, 'with dei=',dialiq
+                   call endrun('asmcoliq is out of [0,1] in U-MICH Rad (cloud_rad_props.F90).')
+               end if
+            end do
+
+            do ib=1,nlwbands
+               taucloud = iclwp(i,k) * 1000._r8 * extcoliq(ib)! change lwp from kg/m2 to g/m2 then compute liquid cloud optical thickness
+               ssacloud = ssacoliq(ib)
+               asycloud = asmcoliq(ib)
+
+               abs_tamu(ib,i,k) = taucloud * (1._r8-ssacloud) ! absorption optical depth
+
+               fpeak = asycloud * asycloud                    ! delta-scaling (Joseph et al., 1976, JAS)
+               taucloud = (1._r8-ssacloud*fpeak) * taucloud
+               ssacloud = (1._r8-fpeak)*ssacloud / (1._r8-ssacloud*fpeak)
+               asycloud = (asycloud-fpeak) / (1._r8-fpeak)
+
+               ext_tamu(ib,i,k) = taucloud                    ! extinction optical depth, i.e. including absorption and scattering
+               ssa_tamu(ib,i,k) = ssacloud                    ! single scattering albedo
+               asm_tamu(ib,i,k) = asycloud                    ! asymmetric factor
+            enddo    ! end do of lwbands for cloud radiative coefficients
+            ! if droplet effective diameter is less than 3 microns
+         else
+            call endrun('droplet effective diameter is less than lower boundl 3 microns in MC6 cloud liquid optics')
+         endif ! end if of droplet effective diameter range
+      enddo    ! end do of k
+   enddo       ! end do of i
+
+   !---------
+   ! return
+   !---------
+   ext_od  (:,:,:) = ext_tamu  (:,:,:)
+   abs_od  (:,:,:) = abs_tamu  (:,:,:)
+   ssa_od  (:,:,:) = ssa_tamu  (:,:,:)
+   asm_od  (:,:,:) = asm_tamu  (:,:,:)   
+
+   return
+end subroutine mc6_liquid_get_rad_props_lw
 
 end module cloud_rad_props

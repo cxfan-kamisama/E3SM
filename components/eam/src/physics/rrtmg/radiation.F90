@@ -92,10 +92,11 @@ integer :: firstblock, lastblock      ! global block indices
 
 !Added by U-MICH team on Dec.15, 2019 --->
 ! these will be overwritten by namelist
-logical,public :: flag_mc6   = .false. ! Use MC6 (MODIS Collection 6) LW ice opticals.
-logical,public :: flag_emis  = .false. ! Use surface emissivit.
-logical,public :: flag_rtr2  = .false. ! Use 2/4-stream LW radiation transfer solver.
-logical,public :: flag_scat  = .false. ! Use MC6 (MODIS Collection 6) LW ice scattering.
+logical,public :: flag_mc6      = .false. ! Use MC6 (MODIS Collection 6) LW ice opticals.
+logical,public :: flag_emis     = .false. ! Use surface emissivit.
+logical,public :: flag_rtr2     = .false. ! Use 2/4-stream LW radiation transfer solver.
+logical,public :: flag_scat_ice = .false. ! Use MC6 (MODIS Collection 6) LW ice scattering.
+logical,public :: flag_scat_liq = .false. ! Use MC6 (MODIS Collection 6) LW liquid scattering.
 
 integer, parameter  :: nlen = 256     ! Length of character strings
 character(len=nlen), public :: surf_emis_file    ! surface emissivity filename
@@ -128,8 +129,8 @@ subroutine radiation_readnl(nlfile, dtime_in)
    ! Variables defined in namelist
    namelist /radiation_nl/ iradsw, iradlw, irad_always, &
                            use_rad_dt_cosz, spectralflux, &
-                           flag_mc6, flag_emis, flag_rtr2, flag_scat, &
-                           surf_emis_file
+                           flag_mc6, flag_emis, flag_rtr2, &
+                           flag_scat_ice, flag_scat_liq, surf_emis_file
 
    ! Read the namelist, only if called from master process
    ! TODO: better documentation and cleaner logic here?
@@ -147,6 +148,16 @@ subroutine radiation_readnl(nlfile, dtime_in)
       call freeunit(unitn)
    end if
 
+   ! Check conflict namelist variables
+   if (flag_scat_liq .or. flag_scat_ice) then
+      if (.not. flag_rtr2) then
+         call endrun(subroutine_name // ':: flag_rtr2 must be set to true if flag_scat_liq or flag_scat_ice is set to true')
+      endif
+      if (.not. flag_mc6) then
+         call endrun(subroutine_name // ':: flag_mc6 must be set to true if flag_scat_liq or flag_scat_ice is set to true')
+      endif
+   end if
+
 #ifdef SPMD
    ! Broadcast namelist variables
    call mpibcast(iradsw, 1, mpi_integer, mstrid, mpicom, ierr)
@@ -158,7 +169,8 @@ subroutine radiation_readnl(nlfile, dtime_in)
    call mpibcast(flag_mc6, 1, mpi_logical, mstrid, mpicom, ierr)
    call mpibcast(flag_emis, 1, mpi_logical, mstrid, mpicom, ierr)
    call mpibcast(flag_rtr2, 1, mpi_logical, mstrid, mpicom, ierr)
-   call mpibcast(flag_scat, 1, mpi_logical, mstrid, mpicom, ierr)   
+   call mpibcast(flag_scat_ice, 1, mpi_logical, mstrid, mpicom, ierr)   
+   call mpibcast(flag_scat_liq, 1, mpi_logical, mstrid, mpicom, ierr)
    call mpibcast(surf_emis_file, len(surf_emis_file), mpi_character, mstrid, mpicom, ierr)
 #endif
 
@@ -301,7 +313,8 @@ subroutine radiation_printopts
    write(iulog,*)'--- flag_emis = ',flag_emis
    write(iulog,*)'--- flag_rtr2 = ',flag_rtr2
    write(iulog,*)'--- flag_mc6 = ',flag_mc6
-   write(iulog,*)'--- flag_scat = ',flag_scat
+   write(iulog,*)'--- flag_scat_ice = ',flag_scat_ice
+   write(iulog,*)'--- flag_scat_liq = ',flag_scat_liq
    if (flag_emis) &
       write(iulog,*)'--- surf_emis_file = ',surf_emis_file
 
@@ -751,6 +764,9 @@ end function radiation_nextsw_cday
 
          ! U-MICH team on Dec.18, 2019 add other fields --->
           call addfld('TAU_LIQ'//diag(icall), (/ 'ilev' /),'A',     ' ', 'Liquid optical depth')
+          call addfld('TAUA_LIQ'//diag(icall), (/ 'ilev' /),'A',     ' ', 'Liquid optical depth (absorption)')
+          call addfld('SSA_LIQ'//diag(icall), (/ 'ilev' /),'A',     ' ', 'Liquid single scattering albedo')
+          call addfld('G_LIQ'//diag(icall), (/ 'ilev' /),'A',     ' ', 'Liquid asymmetric factor')
           call addfld('TAU_ICE'//diag(icall), (/ 'ilev' /),'A',     ' ', 'ICE optical depth')
           call addfld('TAUA_ICE'//diag(icall), (/ 'ilev' /),'A',     ' ', 'ICE optical depth (absorption)')
           call addfld('SSA_ICE'//diag(icall), (/ 'ilev' /),'A',     ' ', 'ICE single scattering albedo')
@@ -758,6 +774,7 @@ end function radiation_nextsw_cday
           call addfld('TAU_SNO'//diag(icall), (/ 'ilev' /),'A',     ' ', 'SNOW optical depth')
           call addfld('TAU_TOT'//diag(icall), (/ 'ilev' /),'A',     ' ', 'All clouds optical depth')
           call addfld('TAU_LIQ_SUM'//diag(icall), horiz_only,'A',     ' ', 'Liquid optical depth (vertical sum)')
+          call addfld('TAUA_LIQ_SUM'//diag(icall), horiz_only,'A',     ' ', 'Liquid absorption optical depth (vertical sum)')
           call addfld('TAU_ICE_SUM'//diag(icall), horiz_only,'A',     ' ', 'ICE optical depth (vertical sum)')
           call addfld('TAUA_ICE_SUM'//diag(icall), horiz_only,'A',     ' ', 'ICE Absorption optical depth (vertical sum)')
           call addfld('TAU_SNO_SUM'//diag(icall), horiz_only,'A',     ' ', 'Snow optical depth (vertical sum)')
@@ -938,7 +955,8 @@ end function radiation_nextsw_cday
     use interpolate_data, only: vertinterp
     use cloud_rad_props,  only: get_ice_optics_sw, get_liquid_optics_sw, liquid_cloud_get_rad_props_lw, &
                ice_cloud_get_rad_props_lw, cloud_rad_props_get_lw, snow_cloud_get_rad_props_lw, get_snow_optics_sw,&
-               mc6_ice_get_rad_props_lw ! U-MICH team add mc6_ice_get_rad_props_lw
+               mc6_ice_get_rad_props_lw,&   ! U-MICH team add mc6_ice_get_rad_props_lw
+               mc6_liquid_get_rad_props_lw  ! U-MICH team add mc6_liquid_get_rad_props_lw
     use slingo,           only: slingo_liq_get_rad_props_lw, slingo_liq_optics_sw
     use ebert_curry,      only: ec_ice_optics_sw, ec_ice_get_rad_props_lw
     use rad_solar_var,    only: get_variability
@@ -1133,10 +1151,15 @@ end function radiation_nextsw_cday
     character(*), parameter :: name = 'radiation_tend'
 
     ! U-MICH team on Dec.18, 2019 --->
+    real(r8) :: liq_lw_ext_mc6 (nbndlw,pcols,pver)  ! liquid cloud extinction (abs.+scat.) optical thickness
+    real(r8) :: liq_lw_ssa_mc6 (nbndlw,pcols,pver)  ! liquid cloud single scattering albedo
+    real(r8) :: liq_lw_asm_mc6 (nbndlw,pcols,pver)  ! liquid cloud asymmetric factor
+    real(r8) :: liq_lw_abs_mc6 (nbndlw,pcols,pver)  ! liquid cloud absorption optical thickness
+
     real(r8) :: ice_lw_ext_mc6 (nbndlw,pcols,pver)  ! ice cloud extinction (abs.+scat.) optical thickness
     real(r8) :: ice_lw_ssa_mc6 (nbndlw,pcols,pver)  ! ice cloud single scattering albedo
-    real(r8) :: ice_lw_asm_mc6(nbndlw,pcols,pver)   ! ice cloud asymmetric factor
-    real(r8) :: ice_lw_abs_mc6  (nbndlw,pcols,pver) ! ice cloud absorption optical thickness
+    real(r8) :: ice_lw_asm_mc6 (nbndlw,pcols,pver)  ! ice cloud asymmetric factor
+    real(r8) :: ice_lw_abs_mc6 (nbndlw,pcols,pver)  ! ice cloud absorption optical thickness
 
     real(r8) :: cld_lw_abs_mc6 (nbndlw,pcols,pver)  ! cloud (liquid+ice) absorption optics depth (LW) 
     real(r8) :: cld_lw_ext_mc6 (nbndlw,pcols,pver)  ! cloud (liquid+ice) extinction optics depth (LW)
@@ -1153,16 +1176,20 @@ end function radiation_nextsw_cday
                                             ! using realistic emissivity values    
    ! for output test only                                             
     real(r8) :: tau_liq (pcols,pver) ! liquid optical depth (vertical sum)
+    real(r8) :: taua_liq (pcols,pver) ! liquid optical depth (absorption, vertical sum)
+    real(r8) :: ssa_liq (pcols,pver) ! liquid single scattering albedo (vertical sum)
+    real(r8) :: asm_liq (pcols,pver) ! liquid asymmetry factor (vertical sum)
     real(r8) :: tau_ice (pcols,pver) ! ice optical depth (vertical sum)
     real(r8) :: taua_ice (pcols,pver) ! ice optical depth (absorption, vertical sum)
-    real(r8) :: ssa_ice (pcols,pver) ! ice optical depth (vertical sum)
-    real(r8) :: asm_ice (pcols,pver) ! ice optical depth (vertical sum)
+    real(r8) :: ssa_ice (pcols,pver) ! ice single scattering albedo (vertical sum)
+    real(r8) :: asm_ice (pcols,pver) ! ice asymmetry factor (vertical sum)
     real(r8) :: tau_sno (pcols,pver) ! snow optical depth (vertical sum)
     real(r8) :: tau_tot (pcols,pver) ! all clouds optical depth (vertical sum)
 
     real(r8) :: tau_liq_sum (pcols) ! liquid optical depth (vertical sum)
-    real(r8) :: taua_ice_sum (pcols) ! liquid optical depth (absorption, vertical sum)
+    real(r8) :: taua_liq_sum (pcols) ! liquid optical depth (absorption, vertical sum)
     real(r8) :: tau_ice_sum (pcols) ! ice optical depth (vertical sum)
+    real(r8) :: taua_ice_sum (pcols) ! ice optical depth (absorption, vertical sum)
     real(r8) :: tau_sno_sum (pcols) ! snow optical depth (vertical sum)
     real(r8) :: tau_tot_sum (pcols) ! all clouds optical depth (vertical sum)
 ! <---
@@ -1171,6 +1198,11 @@ end function radiation_nextsw_cday
     call t_startf ('radiation_tend_init')
 
 ! U-MICH team on Dec.18, 2019 initialization --->
+    liq_lw_ext_mc6(:,:,:)   = 0._r8
+    liq_lw_abs_mc6(:,:,:)   = 0._r8
+    liq_lw_ssa_mc6(:,:,:)   = 0._r8
+    liq_lw_asm_mc6(:,:,:)   = 0._r8
+
     ice_lw_ext_mc6(:,:,:)   = 0._r8
     ice_lw_abs_mc6(:,:,:)   = 0._r8
     ice_lw_ssa_mc6(:,:,:)   = 0._r8
@@ -1190,6 +1222,9 @@ end function radiation_nextsw_cday
 
    ! for test only
     tau_liq (:,:)   = 0._r8
+    taua_liq (:,:)  = 0._r8
+    ssa_liq (:,:)   = 0._r8
+    asm_liq (:,:)   = 0._r8
     taua_ice (:,:)  = 0._r8
     tau_ice (:,:)   = 0._r8
     ssa_ice (:,:)   = 0._r8
@@ -1197,8 +1232,9 @@ end function radiation_nextsw_cday
     tau_sno (:,:)   = 0._r8 
     tau_tot (:,:)   = 0._r8 
     tau_liq_sum (:) = 0._r8
-    taua_ice_sum (:)= 0._r8 
+    taua_liq_sum (:) = 0._r8
     tau_ice_sum (:) = 0._r8
+    taua_ice_sum (:)= 0._r8 
     tau_sno_sum (:) = 0._r8
     tau_tot_sum (:) = 0._r8
 
@@ -1415,9 +1451,11 @@ end function radiation_nextsw_cday
              cld_lw_abs(:,1:ncol,:) = liq_lw_abs(:,1:ncol,:) + ice_lw_abs(:,1:ncol,:)
              ! U-MICH output for value check
              tau_liq(:,:)=liq_lw_abs(2,:,:)
+             taua_liq(:,:)=liq_lw_abs(2,:,:)
              tau_ice(:,:)=ice_lw_abs(2,:,:)
              taua_ice(:,:)=ice_lw_abs(2,:,:)
              tau_liq_sum(:)=sum(liq_lw_abs(2,:,:),dim=2)
+             taua_liq_sum(:)=sum(liq_lw_abs(2,:,:),dim=2)
              tau_ice_sum(:)=sum(ice_lw_abs(2,:,:),dim=2)
              taua_ice_sum(:)=sum(ice_lw_abs(2,:,:),dim=2)
           endif
@@ -1459,12 +1497,14 @@ end function radiation_nextsw_cday
 ! U-MICH team on Dec.18, 2019, MC6 ice optics with ice scattering--->
       else ! (flag_mc6) use MC6 ice optics    
 
-         ! liquid optics (the E3SM default)
+         ! liquid optics
          select case (liqcldoptics)
          case ('slingo')
-            call slingo_liq_get_rad_props_lw(state, pbuf, liq_lw_abs, oldliqwp=.true.)
+            call mc6_liquid_get_rad_props_lw(state, pbuf, liq_lw_ext_mc6, liq_lw_abs_mc6, liq_lw_ssa_mc6, &
+                   liq_lw_asm_mc6, oldliqwp=.true.)
          case ('gammadist')
-            call liquid_cloud_get_rad_props_lw(state, pbuf, liq_lw_abs)
+            call mc6_liquid_get_rad_props_lw(state, pbuf, liq_lw_ext_mc6, liq_lw_abs_mc6, liq_lw_ssa_mc6, &
+                   liq_lw_asm_mc6, oldliqwp=.false.)
          case default
             call endrun('liqcldoptics must be either slingo or gammadist')
          end select        
@@ -1481,20 +1521,36 @@ end function radiation_nextsw_cday
             call endrun('iccldoptics must be one either ebertcurry or mitchell')
          end select
 
+         ! scattering flag switch
+         if (.not.flag_scat_ice) then
+            ice_lw_ext_mc6(:,:,:) = ice_lw_abs_mc6(:,:,:)
+            ice_lw_ssa_mc6(:,:,:) = 0._r8
+            ice_lw_asm_mc6(:,:,:) = 0._r8
+         end if
+         if (.not.flag_scat_liq) then
+            liq_lw_ext_mc6(:,:,:) = liq_lw_abs_mc6(:,:,:)
+            liq_lw_ssa_mc6(:,:,:) = 0._r8
+            liq_lw_asm_mc6(:,:,:) = 0._r8
+         end if
+
          ! calculate cloud optics including liquid and ice
-         cld_lw_abs_mc6(:,1:ncol,:) = liq_lw_abs(:,1:ncol,:) + ice_lw_abs_mc6(:,1:ncol,:)
-         cld_lw_ext_mc6(:,1:ncol,:) = liq_lw_abs(:,1:ncol,:) + ice_lw_ext_mc6(:,1:ncol,:)
+         cld_lw_abs_mc6(:,1:ncol,:) = liq_lw_abs_mc6(:,1:ncol,:) + ice_lw_abs_mc6(:,1:ncol,:)
+         cld_lw_ext_mc6(:,1:ncol,:) = liq_lw_ext_mc6(:,1:ncol,:) + ice_lw_ext_mc6(:,1:ncol,:)
 
          ! assign to the old variables for COSP
          cld_lw_abs(:,1:ncol,:) = cld_lw_abs_mc6(:,1:ncol,:)
 
          ! U-MICH output for value check
-         tau_liq(:,:)=liq_lw_abs(2,:,:)
+         tau_liq(:,:)=liq_lw_ext_mc6(2,:,:)
+         taua_liq(:,:)=liq_lw_abs_mc6(2,:,:)
          tau_ice(:,:)=ice_lw_ext_mc6(2,:,:)
          taua_ice(:,:)=ice_lw_abs_mc6(2,:,:)
+         ssa_liq(:,:)=liq_lw_ssa_mc6(2,:,:)
+         asm_liq(:,:)=liq_lw_asm_mc6(2,:,:)
          ssa_ice(:,:)=ice_lw_ssa_mc6(2,:,:)
          asm_ice(:,:)=ice_lw_asm_mc6(2,:,:)
-         tau_liq_sum(:)=sum(liq_lw_abs(2,:,:),dim=2)
+         tau_liq_sum(:)=sum(liq_lw_ext_mc6(2,:,:),dim=2)
+         taua_liq_sum(:)=sum(liq_lw_abs_mc6(2,:,:),dim=2)
          tau_ice_sum(:)=sum(ice_lw_ext_mc6(2,:,:),dim=2)
          taua_ice_sum(:)=sum(ice_lw_abs_mc6(2,:,:),dim=2)
 
@@ -1533,8 +1589,10 @@ end function radiation_nextsw_cday
            do k  = 1,pver
              do iband = 1,nbndlw
                if (cldfprime(i,k) > 0._r8 .and. c_cld_lw_ext(iband,i,k) .gt. 0._r8) then 
-                 c_cld_lw_ssa (iband,i,k) = ice_lw_ssa_mc6(iband,i,k)*ice_lw_ext_mc6(iband,i,k) / &
-                         c_cld_lw_ext(iband,i,k)
+                 c_cld_lw_ssa (iband,i,k) = ( &
+                     liq_lw_ssa_mc6(iband,i,k)*liq_lw_ext_mc6(iband,i,k) &
+                    +ice_lw_ssa_mc6(iband,i,k)*ice_lw_ext_mc6(iband,i,k) &
+                  ) / c_cld_lw_ext(iband,i,k)
                  c_cld_lw_ssa (iband,i,k) = min(max(c_cld_lw_ssa(iband,i,k),0._r8) , 1._r8)
                else 
                  c_cld_lw_ssa (iband,i,k) = 0._r8
@@ -1542,9 +1600,10 @@ end function radiation_nextsw_cday
 
                if (cldfprime(i,k) > 0._r8 .and. c_cld_lw_ext(iband,i,k) .gt. 0._r8 .and. &
                      c_cld_lw_ssa(iband,i,k) .gt. 0._r8 ) then 
-                 c_cld_lw_asm(iband,i,k) = ice_lw_asm_mc6(iband,i,k)* & 
-                            ice_lw_ssa_mc6(iband,i,k)*ice_lw_ext_mc6(iband,i,k)/ &
-                            c_cld_lw_ext(iband,i,k)/c_cld_lw_ssa(iband,i,k)
+                 c_cld_lw_asm(iband,i,k) = ( &
+                     ice_lw_asm_mc6(iband,i,k)*ice_lw_ssa_mc6(iband,i,k)*ice_lw_ext_mc6(iband,i,k) &
+                    +liq_lw_asm_mc6(iband,i,k)*liq_lw_ssa_mc6(iband,i,k)*liq_lw_ext_mc6(iband,i,k) &
+                 ) / c_cld_lw_ext(iband,i,k) / c_cld_lw_ssa(iband,i,k)
                  c_cld_lw_asm(iband,i,k) = &
                          min( 1._r8, max(c_cld_lw_asm(iband,i,k),-1._r8) )
                else
@@ -1554,33 +1613,6 @@ end function radiation_nextsw_cday
               enddo
             enddo
          enddo
-
-        ! compute effective Cloud phase function expansion coefficient
-        !do i  = 1,ncol
-        !   do k  = 1,pver
-        !     do iband = 1,nbndlw
-        !        if (cldfprime(i,k) > 0._r8 .and. c_cld_lw_ext(iband,i,k) .gt. 0._r8 .and. &
-        !              c_cld_lw_ssa(iband,i,k) .gt. 0._r8 ) then 
-        !          c_cld_lw_asm(iband,i,k) = ice_lw_asm_mc6(iband,i,k)* & 
-        !                     ice_lw_ssa_mc6(iband,i,k)*ice_lw_ext_mc6(iband,i,k)/ &
-        !                     c_cld_lw_ext(iband,i,k)/c_cld_lw_ssa(iband,i,k)
-        !          c_cld_lw_asm(iband,i,k) = &
-        !                  min( 1._r8, max(c_cld_lw_asm(iband,i,k),-1._r8) )
-        !        else
-        !          c_cld_lw_asm(iband,i,k) = 0._r8  
-        !        endif  
-        !     enddo  
-        !   enddo
-        !enddo
-
-        ! return variable
-        if (flag_rtr2 .and. flag_scat) then   ! use MC6 absorption+scattering
-           continue  ! do nothing
-        else    ! use MC6 absorption optics (but not scattering optics) 
-          c_cld_lw_ext  (:,:,:) = c_cld_lw_abs(:,:,:) !use absorption for extinction
-          c_cld_lw_ssa  (:,:,:) = 0._r8
-          c_cld_lw_asm  (:,:,:) = 0._r8
-        endif
       
         ! U-MICH test only
         tau_tot(:,:) = c_cld_lw_ext(2,:,:)
@@ -1834,6 +1866,9 @@ end function radiation_nextsw_cday
 
                   !U-MICH test only
                   call outfld('TAU_LIQ'//diag(icall), tau_liq(:,:), pcols,lchnk)
+                  call outfld('TAUA_LIQ'//diag(icall), taua_liq(:,:), pcols,lchnk)
+                  call outfld('SSA_LIQ'//diag(icall), ssa_liq(:,:), pcols,lchnk)
+                  call outfld('G_LIQ'//diag(icall), asm_liq(:,:), pcols,lchnk)
                   call outfld('TAU_ICE'//diag(icall), tau_ice(:,:), pcols,lchnk)
                   call outfld('TAUA_ICE'//diag(icall), taua_ice(:,:), pcols,lchnk)
                   call outfld('SSA_ICE'//diag(icall), ssa_ice(:,:), pcols,lchnk)
@@ -1841,6 +1876,7 @@ end function radiation_nextsw_cday
                   call outfld('TAU_SNO'//diag(icall), tau_sno(:,:), pcols,lchnk)
                   call outfld('TAU_TOT'//diag(icall), tau_tot(:,:), pcols,lchnk)
                   call outfld('TAU_LIQ_SUM'//diag(icall), tau_liq_sum(:), pcols,lchnk)
+                  call outfld('TAUA_LIQ_SUM'//diag(icall), taua_liq_sum(:), pcols,lchnk)
                   call outfld('TAU_ICE_SUM'//diag(icall), tau_ice_sum(:), pcols,lchnk)
                   call outfld('TAUA_ICE_SUM'//diag(icall), taua_ice_sum(:), pcols,lchnk)
                   call outfld('TAU_SNO_SUM'//diag(icall), tau_sno_sum(:), pcols,lchnk)

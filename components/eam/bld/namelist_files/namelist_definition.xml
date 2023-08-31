@@ -3741,9 +3741,15 @@ Indicates whether to use a hybrid 2-4 stream radiative transfer in longwave radi
 Default: FALSE
 </entry>
 
-<entry id="flag_scat" type="logical"  category="radiation"
+<entry id="flag_scat_ice" type="logical"  category="radiation"
        group="radiation_nl" valid_values="" >
-Indicates whether to use a hybrid 2-4 stream radiative transfer in longwave radiative calculations (U-MICH)
+Indicates whether to include ice cloud scattering in longwave radiative calculations (U-MICH)
+Default: FALSE
+</entry>
+
+<entry id="flag_scat_liq" type="logical"  category="radiation"
+       group="radiation_nl" valid_values="" >
+Indicates whether to include liquid cloud scattering in longwave radiative calculations (U-MICH)
 Default: FALSE
 </entry>
 
