@@ -763,55 +763,71 @@ end function radiation_nextsw_cday
                       sampling_seq='rad_lwsw', flag_xyfill=.true.)
 
          ! U-MICH team on Dec.18, 2019 add other fields --->
-          call addfld('TAU_LIQ'//diag(icall), (/ 'ilev' /),'A',     ' ', 'Liquid optical depth')
-          call addfld('TAUA_LIQ'//diag(icall), (/ 'ilev' /),'A',     ' ', 'Liquid optical depth (absorption)')
-          call addfld('SSA_LIQ'//diag(icall), (/ 'ilev' /),'A',     ' ', 'Liquid single scattering albedo')
-          call addfld('G_LIQ'//diag(icall), (/ 'ilev' /),'A',     ' ', 'Liquid asymmetric factor')
-          call addfld('TAU_ICE'//diag(icall), (/ 'ilev' /),'A',     ' ', 'ICE optical depth')
-          call addfld('TAUA_ICE'//diag(icall), (/ 'ilev' /),'A',     ' ', 'ICE optical depth (absorption)')
-          call addfld('SSA_ICE'//diag(icall), (/ 'ilev' /),'A',     ' ', 'ICE single scattering albedo')
-          call addfld('G_ICE'//diag(icall), (/ 'ilev' /),'A',     ' ', 'ICE asymmetric factor')
-          call addfld('TAU_SNO'//diag(icall), (/ 'ilev' /),'A',     ' ', 'SNOW optical depth')
-          call addfld('TAU_TOT'//diag(icall), (/ 'ilev' /),'A',     ' ', 'All clouds optical depth')
-          call addfld('TAU_LIQ_SUM'//diag(icall), horiz_only,'A',     ' ', 'Liquid optical depth (vertical sum)')
-          call addfld('TAUA_LIQ_SUM'//diag(icall), horiz_only,'A',     ' ', 'Liquid absorption optical depth (vertical sum)')
-          call addfld('TAU_ICE_SUM'//diag(icall), horiz_only,'A',     ' ', 'ICE optical depth (vertical sum)')
-          call addfld('TAUA_ICE_SUM'//diag(icall), horiz_only,'A',     ' ', 'ICE Absorption optical depth (vertical sum)')
-          call addfld('TAU_SNO_SUM'//diag(icall), horiz_only,'A',     ' ', 'Snow optical depth (vertical sum)')
-          call addfld('TAU_TOT_SUM'//diag(icall), horiz_only,'A',     ' ', 'All clouds optical depth (vertical sum)')
+          call addfld('TAU_LIQ'//diag(icall), (/ 'lev' /),'A',     ' ', 'Liquid optical depth', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAUA_LIQ'//diag(icall), (/ 'lev' /),'A',     ' ', 'Liquid optical depth (absorption)', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('SSA_LIQ'//diag(icall), (/ 'lev' /),'A',     ' ', 'Liquid single scattering albedo', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('G_LIQ'//diag(icall), (/ 'lev' /),'A',     ' ', 'Liquid asymmetric factor', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAU_ICE'//diag(icall), (/ 'lev' /),'A',     ' ', 'ICE optical depth', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAUA_ICE'//diag(icall), (/ 'lev' /),'A',     ' ', 'ICE optical depth (absorption)', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('SSA_ICE'//diag(icall), (/ 'lev' /),'A',     ' ', 'ICE single scattering albedo', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('G_ICE'//diag(icall), (/ 'lev' /),'A',     ' ', 'ICE asymmetric factor', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAU_SNO'//diag(icall), (/ 'lev' /),'A',     ' ', 'SNOW optical depth', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAU_TOT'//diag(icall), (/ 'lev' /),'A',     ' ', 'All clouds optical depth', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAU_LIQ_SUM'//diag(icall), horiz_only,'A',     ' ', 'Liquid optical depth (vertical sum)', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAUA_LIQ_SUM'//diag(icall), horiz_only,'A',     ' ', 'Liquid absorption optical depth (vertical sum)', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAU_ICE_SUM'//diag(icall), horiz_only,'A',     ' ', 'ICE optical depth (vertical sum)', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAUA_ICE_SUM'//diag(icall), horiz_only,'A',     ' ', 'ICE Absorption optical depth (vertical sum)', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAU_SNO_SUM'//diag(icall), horiz_only,'A',     ' ', 'Snow optical depth (vertical sum)', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
+          call addfld('TAU_TOT_SUM'//diag(icall), horiz_only,'A',     ' ', 'All clouds optical depth (vertical sum)', &
+                      sampling_seq='rad_lwsw', flag_xyfill=.true.)
 
          call addfld('EMIS01'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 01 - 10-350 cm-1', &
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS02'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 02 - 350-500 cm-1', &
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS03'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 03 - 500-630 cm-1', &
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS04'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 04 - 630-700 cm-1', &
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS05'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 05 - 700-820 cm-1', &
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS06'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 06 - 820-980 cm-1', &
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS07'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 07 - 980-1080 cm-1', &
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS08'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 08 - 1080-1180 cm-1',& 
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS09'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 09 - 1180-1390 cm-1',& 
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS10'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 10 - 1390-1480 cm-1',& 
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS11'//diag(icall),  horiz_only,'A', 'unitless', 'surface emissivity - band 11 - 1480-1800 cm-1',& 
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS12'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 12 - 1800-2080 cm-1',&
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS13'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 13 - 2080-2250 cm-1',&
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS14'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 14 - 2250-2380 cm-1',&
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS15'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 15-  2380-2600 cm-1',&
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
          call addfld('EMIS16'//diag(icall),   horiz_only,'A', 'unitless', 'surface emissivity - band 16 - 2600-3250 cm-1',&
-                 sampling_seq='rad_lwsw')
+                 sampling_seq='rad_lwsw', flag_xyfill=.true.)
       ! <--- U-MICH team on Dec.18, 2019 add other fields.
 
           if (history_amwg) then
