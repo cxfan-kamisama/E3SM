@@ -24,7 +24,7 @@ readonly PROJECT="m2136"
 # Simulation
 readonly COMPSET="WCYCL1850"
 readonly RESOLUTION="ne30pg2_EC30to60E2r2"
-readonly CASE_NAME="E3SMv2.pm.UMRad.piControl.0101.FixRTR2.Full"
+readonly CASE_NAME="E3SMv2.pm.UMRad.LiqCld.Scat.Test"
 readonly CASE_GROUP="E3SMv2.pm.UMRad"
 
 # Code and compilation
@@ -34,8 +34,8 @@ readonly CHERRY=( )
 readonly DEBUG_COMPILE=false
 
 # Run options
-readonly MODEL_START_TYPE="branch"  # 'initial', 'continue', 'branch', 'hybrid'
-readonly START_DATE="0001-01-01"
+readonly MODEL_START_TYPE="hybrid"  # 'initial', 'continue', 'branch', 'hybrid'
+readonly START_DATE="0101-01-01"
 
 # Additional options for 'branch' and 'hybrid'
 readonly GET_REFCASE=TRUE
@@ -55,8 +55,8 @@ readonly CASE_ARCHIVE_DIR=${CASE_ROOT}/archive
 #  short tests: 'XS_2x5_ndays', 'XS_1x10_ndays', 'S_1x10_ndays',
 #               'M_1x10_ndays', 'M2_1x10_ndays', 'M80_1x10_ndays', 'L_1x10_ndays'
 #  or 'production' for full simulation
-readonly run='production'
-readonly debug_queue=false
+readonly run='S_1x5_ndays'
+readonly debug_queue=true
 
 if [ "${run}" != "production" ]; then
 
@@ -155,16 +155,18 @@ echo $'\n----- All done -----\n'
 user_nl() {
 
 cat << EOF >> user_nl_eam
- nhtfrq = 0
- mfilt  = 1
- avgflag_pertape = 'A'
+ nhtfrq = -24,-3
+ mfilt  = 1,1
+ avgflag_pertape = 'A','A'
  fexcl1 = 'CFAD_SR532_CAL', 'LINOZ_DO3', 'LINOZ_DO3_PSC', 'LINOZ_O3CLIM', 'LINOZ_O3COL', 'LINOZ_SSO3', 'hstobie_linoz'
- fincl1 = 'QRLC','QRL','IWC','LWC','CLDICE','CLDLIQ'
+ fincl1 = 'QRLC','QRL'
+ fincl2 = 'TAU_LIQ','TAUA_LIQ','SSA_LIQ','G_LIQ','TAU_ICE','TAUA_ICE','SSA_ICE','G_ICE'
 
 ! UMRad flags
  flag_mc6 = .true.
  flag_rtr2 = .true.
- flag_scat = .true.
+ flag_scat_ice = .true.
+ flag_scat_liq = .true.
  flag_emis = .true.
  surf_emis_file = '$SURF_EMIS_FILE'
 
