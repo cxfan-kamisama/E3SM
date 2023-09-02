@@ -167,6 +167,7 @@ cat << EOF >> user_nl_eam
  flag_rtr2 = .true.
  flag_scat_ice = .true.
  flag_scat_liq = .true.
+ flag_dbl_call = .false.
  flag_emis = .true.
  surf_emis_file = '$SURF_EMIS_FILE'
 

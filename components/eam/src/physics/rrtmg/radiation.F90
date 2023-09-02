@@ -97,6 +97,7 @@ logical,public :: flag_emis     = .false. ! Use surface emissivit.
 logical,public :: flag_rtr2     = .false. ! Use 2/4-stream LW radiation transfer solver.
 logical,public :: flag_scat_ice = .false. ! Use MC6 (MODIS Collection 6) LW ice scattering.
 logical,public :: flag_scat_liq = .false. ! Use MC6 (MODIS Collection 6) LW liquid scattering.
+logical,public :: flag_dbl_call = .false. ! flag to enable double call of LW radiation
 
 integer, parameter  :: nlen = 256     ! Length of character strings
 character(len=nlen), public :: surf_emis_file    ! surface emissivity filename
@@ -130,7 +131,8 @@ subroutine radiation_readnl(nlfile, dtime_in)
    namelist /radiation_nl/ iradsw, iradlw, irad_always, &
                            use_rad_dt_cosz, spectralflux, &
                            flag_mc6, flag_emis, flag_rtr2, &
-                           flag_scat_ice, flag_scat_liq, surf_emis_file
+                           flag_scat_ice, flag_scat_liq, surf_emis_file, &
+                           flag_dbl_call
 
    ! Read the namelist, only if called from master process
    ! TODO: better documentation and cleaner logic here?
@@ -171,6 +173,7 @@ subroutine radiation_readnl(nlfile, dtime_in)
    call mpibcast(flag_rtr2, 1, mpi_logical, mstrid, mpicom, ierr)
    call mpibcast(flag_scat_ice, 1, mpi_logical, mstrid, mpicom, ierr)   
    call mpibcast(flag_scat_liq, 1, mpi_logical, mstrid, mpicom, ierr)
+   call mpibcast(flag_dbl_call, 1, mpi_logical, mstrid, mpicom, ierr)
    call mpibcast(surf_emis_file, len(surf_emis_file), mpi_character, mstrid, mpicom, ierr)
 #endif
 
@@ -315,6 +318,7 @@ subroutine radiation_printopts
    write(iulog,*)'--- flag_mc6 = ',flag_mc6
    write(iulog,*)'--- flag_scat_ice = ',flag_scat_ice
    write(iulog,*)'--- flag_scat_liq = ',flag_scat_liq
+   write(iulog,*)'--- flag_dbl_call = ',flag_dbl_call
    if (flag_emis) &
       write(iulog,*)'--- surf_emis_file = ',surf_emis_file
 
@@ -830,6 +834,35 @@ end function radiation_nextsw_cday
                  sampling_seq='rad_lwsw', flag_xyfill=.true.)
       ! <--- U-MICH team on Dec.18, 2019 add other fields.
 
+      !>>>>>>>>> offline cloud scattering >>>>>>>>>
+         if (flag_dbl_call) then
+            call addfld('QRL_NOSCAT'//diag(icall),  (/ 'lev' /), 'A',     'K/s', 'Longwave heating rate', sampling_seq='rad_lwsw')
+            call addfld('QRLC_NOSCAT'//diag(icall),  (/ 'lev' /), 'A',    'K/s', 'Clearsky longwave heating rate', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLDS_NOSCAT'//diag(icall), horiz_only,    'A',    'W/m2', 'Downwelling longwave flux at surface', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLDSC_NOSCAT'//diag(icall), horiz_only,    'A',   'W/m2', 'Clearsky Downwelling longwave flux at surface', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLNS_NOSCAT'//diag(icall), horiz_only,    'A',    'W/m2', 'Net longwave flux at surface', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLNT_NOSCAT'//diag(icall), horiz_only,    'A',    'W/m2', 'Net longwave flux at top of model', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLUT_NOSCAT'//diag(icall), horiz_only,    'A',    'W/m2', 'Upwelling longwave flux at top of model', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLUTC_NOSCAT'//diag(icall), horiz_only,    'A',   'W/m2', 'Clearsky upwelling longwave flux at top of model', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLNTC_NOSCAT'//diag(icall), horiz_only,    'A',   'W/m2', 'Clearsky net longwave flux at top of model', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('LWCF_NOSCAT'//diag(icall), horiz_only,    'A',    'W/m2', 'Longwave cloud forcing', sampling_seq='rad_lwsw')
+            call addfld('FLN200_NOSCAT'//diag(icall), horiz_only,    'A',  'W/m2', 'Net longwave flux at 200 mb', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLN200C_NOSCAT'//diag(icall), horiz_only,    'A', 'W/m2', 'Clearsky net longwave flux at 200 mb', &
+                                                                              sampling_seq='rad_lwsw')
+            call addfld('FLNSC_NOSCAT'//diag(icall), horiz_only,    'A',   'W/m2', 'Clearsky net longwave flux at surface', &
+                                                                                       sampling_seq='rad_lwsw')
+         endif
+      !<<<<<<<<<<<<<< offline cloud scattering <<<<<<<<<<<<<<<<
+
           if (history_amwg) then
              call add_default('QRL'//diag(icall),   1, ' ')
              call add_default('FLNS'//diag(icall),  1, ' ')
@@ -1209,6 +1242,37 @@ end function radiation_nextsw_cday
     real(r8) :: tau_sno_sum (pcols) ! snow optical depth (vertical sum)
     real(r8) :: tau_tot_sum (pcols) ! all clouds optical depth (vertical sum)
 ! <---
+
+    !>>>> offline cloud scattering >>>>>>
+    real(r8) :: c_cld_lw_abs_off (nbndlw,pcols,pver)
+    real(r8) :: c_cld_lw_ext_off (nbndlw,pcols,pver)
+    real(r8) :: c_cld_lw_ssa_off (nbndlw,pcols,pver)
+    real(r8) :: c_cld_lw_asm_off (0:1,nbndlw,pcols,pver)
+
+    real(r8) flut_off(pcols)          ! Upward flux at top of model
+    real(r8) flutc_off(pcols)         ! Upward Clear Sky flux at top of model
+    real(r8) flnt_off(pcols)          ! Upward flux at top of model
+    real(r8) flntc_off(pcols)         ! Clear sky lw flux at model top
+    real(r8) flns_off(pcols)          ! Upward flux at top of model
+    real(r8) flnsc_off(pcols)         ! Clear sky lw flux at srf (down)
+    real(r8) flds_off(pcols)          ! Clear sky lw flux at srf (down)
+    real(r8) fldsc_off(pcols)         ! Clear sky lw flux at srf (down)
+    real(r8) flwds_off(pcols)         ! Clear sky lw flux at srf (down)
+    real(r8) fnl_off(pcols,pverp)     ! net longwave flux
+    real(r8) fcnl_off(pcols,pverp)    ! net clear-sky longwave flux
+    real(r8) lwcf_off(pcols)          ! longwave cloud forcing
+    real(r8) fln200_off(pcols)        ! net longwave flux interpolated to 200 mb
+    real(r8) fln200c_off(pcols)       ! net clearsky longwave flux interpolated to 200 mb
+    real(r8) qrl_off(pcols,pver)      ! clearsky longwave  radiative heating rate 
+    real(r8) qrlc_off(pcols,pver)     ! clearsky longwave  radiative heating rate 
+    integer :: clm_seed_off (pcols,kiss_seed_num)
+    real(r8) :: ful_off(pcols,pverp)     ! Total upwards longwave flux
+    real(r8) :: fsul_off(pcols,pverp)    ! Clear sky upwards longwave flux
+    real(r8) :: fdl_off(pcols,pverp)     ! Total downwards longwave flux
+    real(r8) :: fsdl_off(pcols,pverp)    ! Clear sky downwards longwv flux
+    real(r8) :: lwdn_spec_off(nbndlw, pcols)    ! spectral download LW flux  ! added on June12, 2016
+    !<<<<<< offline cloud scattering <<<<<
+
 !----------------------------------------------------------------------
 
     call t_startf ('radiation_tend_init')
@@ -1505,6 +1569,12 @@ end function radiation_nextsw_cday
           c_cld_lw_ext(:,:,:) = c_cld_lw_abs(:,:,:)
           c_cld_lw_ssa(:,:,:) = 0._r8
           c_cld_lw_asm(:,:,:) = 0._r8
+          if (flag_dbl_call) then
+            c_cld_lw_abs_off  (1:nbndlw,1:ncol,:)  =c_cld_lw_abs(:,1:ncol,:)
+            c_cld_lw_ext_off  (1:nbndlw,1:ncol,:)  =c_cld_lw_abs(:,1:ncol,:)
+            c_cld_lw_ssa_off  (1:nbndlw,1:ncol,:)  =0._r8
+            c_cld_lw_asm_off  (:,1:nbndlw,1:ncol,:)=0._r8
+          endif
 
       ! U-MICH test only
          tau_tot(:,:) = c_cld_lw_ext(2,:,:)
@@ -1629,6 +1699,13 @@ end function radiation_nextsw_cday
               enddo
             enddo
          enddo
+
+        if (flag_dbl_call) then
+            c_cld_lw_abs_off  (1:nbndlw,1:ncol,:) = c_cld_lw_abs(:,1:ncol,:)
+            c_cld_lw_ext_off  (1:nbndlw,1:ncol,:) = c_cld_lw_abs(:,1:ncol,:)
+            c_cld_lw_ssa_off  (1:nbndlw,1:ncol,:) = 0._r8
+            c_cld_lw_asm_off(:,1:nbndlw,1:ncol,:) = 0._r8
+        endif
       
         ! U-MICH test only
         tau_tot(:,:) = c_cld_lw_ext(2,:,:)
@@ -1833,6 +1910,22 @@ end function radiation_nextsw_cday
                   call aer_rad_props_lw(is_cmip6_volc, icall, dt, state, pbuf,  aer_lw_abs)
                   
                   call t_startf ('rad_rrtmg_lw')
+
+                  !>>>>>>> offline cloud scattering >>>>>>>>>>>> 
+                  if (flag_dbl_call) then
+                     clm_seed_off(:,:)=clm_seed(:,:)
+                     call rad_rrtmg_lw( &
+                       lchnk,        ncol,         num_rrtmg_levs,  r_state,                     &
+                       state%pmid,   aer_lw_abs,   cldfprime,       c_cld_lw_ext_off,                &
+                       qrl_off,      qrlc_off,                                                       &
+                       flns_off,     flnt_off,      flnsc_off,      flntc_off,     flwds_off, &
+                       flut_off,     flutc_off,     fnl_off,        fcnl_off,      fldsc_off,         &
+                       clm_seed_off,     lu,           ld,                                           &
+                       flag_rtr2,     c_cld_lw_ssa_off,  c_cld_lw_asm_off,  surface_emis,   &
+                       lwdn_spec_off         )
+                  end if ! flag_dbl_call
+                  ! <<<<<<<<<<<< offline cloud scattering <<<<<<<<<
+
                   ! U-MICH team modify --->
                   call rad_rrtmg_lw( &
                        lchnk,        ncol,         num_rrtmg_levs,  r_state,                     &
@@ -1879,6 +1972,32 @@ end function radiation_nextsw_cday
                   call outfld('FLN200'//diag(icall),fln200,pcols,lchnk)
                   call outfld('FLN200C'//diag(icall),fln200c,pcols,lchnk)
                   call outfld('FLDS'//diag(icall),cam_out%flwds ,pcols,lchnk)
+
+                  !>>>>>>> offline cloud scattering >>>>>>>>>>>> 
+                  if (flag_dbl_call) then
+                     !  Output fluxes at 200 mb
+                     call vertinterp(ncol, pcols, pverp, state%pint, 20000._r8, fnl_off, fln200_off)
+                     call vertinterp(ncol, pcols, pverp, state%pint, 20000._r8, fcnl_off, fln200c_off)
+                     ! Dump longwave radiation information to history tape buffer (diagnostics)
+                     do i=1,ncol
+                        lwcf_off(i)=flutc_off(i) - flut_off(i)
+                     end do
+                     call outfld('QRL_NOSCAT'//diag(icall),qrl_off (:ncol,:)/cpair,ncol,lchnk)
+                     call outfld('QRLC_NOSCAT'//diag(icall),qrlc_off(:ncol,:)/cpair,ncol,lchnk)
+                     call outfld('FLNT_NOSCAT'//diag(icall),flnt_off  ,pcols,lchnk)
+                     call outfld('FLUT_NOSCAT'//diag(icall),flut_off  ,pcols,lchnk)
+                     call outfld('FLUTC_NOSCAT'//diag(icall),flutc_off ,pcols,lchnk)
+                     call outfld('FLNTC_NOSCAT'//diag(icall),flntc_off ,pcols,lchnk)
+                     call outfld('FLNS_NOSCAT'//diag(icall),flns_off  ,pcols,lchnk)
+
+                     call outfld('FLDSC_NOSCAT'//diag(icall),fldsc_off ,pcols,lchnk)
+                     call outfld('FLNSC_NOSCAT'//diag(icall),flnsc_off ,pcols,lchnk)
+                     call outfld('LWCF_NOSCAT'//diag(icall),lwcf_off  ,pcols,lchnk)
+                     call outfld('FLN200_NOSCAT'//diag(icall),fln200_off,pcols,lchnk)
+                     call outfld('FLN200C_NOSCAT'//diag(icall),fln200c_off,pcols,lchnk)
+                     call outfld('FLDS_NOSCAT'//diag(icall),flwds_off ,pcols,lchnk)
+                 end if ! flag_dbl_call
+                 ! <<<<<<<<<<<< offline cloud scattering <<<<<<<<<
 
                   !U-MICH test only
                   call outfld('TAU_LIQ'//diag(icall), tau_liq(:,:), pcols,lchnk)
